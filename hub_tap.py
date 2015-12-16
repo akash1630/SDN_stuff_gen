@@ -32,6 +32,7 @@ def _handle_PacketIn (event):
     p = p.next
 
     if tcp:
+            log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
             if tcp.SYN and !tcp.ACK:
               log.debug("SYN Packet!!")
               syn_counter++
