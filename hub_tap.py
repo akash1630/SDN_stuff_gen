@@ -4,6 +4,7 @@ import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 
 log = core.getLogger()
+syn_counter = 0
 
 def send_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
@@ -23,7 +24,6 @@ def _handle_PacketIn (event):
     #(packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
 
   p = packet
-  syn_counter = 0
   while p:
     ic = packet.find("icmp")
     i4 = packet.find("ipv4")
@@ -33,7 +33,7 @@ def _handle_PacketIn (event):
 
     if tcp:
             log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
-            if tcp.SYN and !tcp.ACK:
+            if tcp.SYN and tcp.ACK != 1:
               log.debug("SYN Packet!!")
               syn_counter++
 
