@@ -19,27 +19,33 @@ def send_packet (event, dst_port = of.OFPP_ALL):
 def _handle_PacketIn (event):
   packet =event.parsed
   send_packet(event, of.OFPP_ALL)
-  log.debug("[+] Broadcasting %s.%i -> %s.%i" %
-    (packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
+  #log.debug("[+] Broadcasting %s.%i -> %s.%i" %
+    #(packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
 
   p = packet
+  syn_counter = 0
   while p:
     ic = packet.find("icmp")
     i4 = packet.find("ipv4")
+    tcp = packet.find("tcp")
     if not hasattr(p, 'next'): break
     p = p.next
 
     if ic:
-            log.debug("ICMP Packet")
+            #log.debug("ICMP Packet")
     if i4:
-            log.debug("IP: "+str(i4.srcip)+"<->"+str(i4.dstip))
+            #log.debug("IP: "+str(i4.srcip)+"<->"+str(i4.dstip))
+    if tcp:
+            if tcp.SYN and !tcp.ACK:
+              log.debug("SYN Packet!!")
+              syn_counter++
 
 
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
 
 def check_flows ():
-  log.debug("[!] +5s Periodic Interval")
+  log.debug("[!] +5s Periodic Interval. Total SYN pakcets served : %d", syn_counter)
 
 def launch ():
   Timer(5,check_flows,recurring = True)
