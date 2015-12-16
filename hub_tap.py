@@ -35,7 +35,7 @@ def _handle_PacketIn (event):
             log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
             if tcp.SYN and tcp.ACK != 1:
               log.debug("SYN Packet!!")
-              syn_counter++
+              syn_counter = syn_counter + 1
 
     #if ic:
             #log.debug("ICMP Packet")
