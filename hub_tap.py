@@ -31,14 +31,15 @@ def _handle_PacketIn (event):
     if not hasattr(p, 'next'): break
     p = p.next
 
-    if ic:
-            #log.debug("ICMP Packet")
-    if i4:
-            #log.debug("IP: "+str(i4.srcip)+"<->"+str(i4.dstip))
     if tcp:
             if tcp.SYN and !tcp.ACK:
               log.debug("SYN Packet!!")
               syn_counter++
+
+    #if ic:
+            #log.debug("ICMP Packet")
+    #if i4:
+            #log.debug("IP: "+str(i4.srcip)+"<->"+str(i4.dstip))
 
 
 def _handle_ConnectionUp (event):
