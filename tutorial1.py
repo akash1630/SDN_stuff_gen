@@ -53,9 +53,15 @@ class Tutorial (object):
       log.warning("Ignoring incomplete packet")
       return
     packet_in = event.ofp # The actual ofp_packet_in message.
-
+    p = packet
+    while p:
+      ic = p.find("icmp")
+      if ic:
+        log.debug("found icmp packet. Dropping it!")
+      if (not ic)
+        self.act_like_switch(packet, packet_in)
     #self.act_like_hub(packet, packet_in)
-    self.act_like_switch(packet, packet_in)
+    #self.act_like_switch(packet, packet_in)
 
 def launch ():
   """
