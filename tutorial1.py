@@ -58,7 +58,7 @@ class Tutorial (object):
       ic = p.find("icmp")
       if ic:
         log.debug("found icmp packet. Dropping it!")
-      if (not ic)
+      if (not ic):
         self.act_like_switch(packet, packet_in)
     #self.act_like_hub(packet, packet_in)
     #self.act_like_switch(packet, packet_in)
