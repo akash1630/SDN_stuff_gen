@@ -27,21 +27,20 @@ def _handle_PacketIn (event):
   while p:
     ic = packet.find("icmp")
     i4 = packet.find("ipv4")
-    tcp = packet.find("tcp")
     if not hasattr(p, 'next'): break
     p = p.next
 
-    if tcp:
-            log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
-            if tcp.SYN and tcp.ACK != 1:
-              log.debug("SYN Packet!!")
-              syn_counter = syn_counter + 1
-
     #if ic:
             #log.debug("ICMP Packet")
-    #if i4:
-            #log.debug("IP: "+str(i4.srcip)+"<->"+str(i4.dstip))
-
+    if i4:
+            log.debug("IP: "+str(i4.srcip)+"<->"+str(i4.dstip))
+            tcp = packet.find("tcp")
+            if tcp:
+              log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
+              if tcp.SYN and (not tcp.ACK):
+                log.debug("SYN Packet!!")
+                syn_counter = syn_counter + 1
+            
 
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
