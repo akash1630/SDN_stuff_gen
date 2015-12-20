@@ -18,10 +18,12 @@ def send_packet (event, dst_port = of.OFPP_ALL):
   event.connection.send(msg)
 
 def _handle_PacketIn (event):
+
+  global syn_counter
   packet =event.parsed
   send_packet(event, of.OFPP_ALL)
-  #log.debug("[+] Broadcasting %s.%i -> %s.%i" %
-    #(packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
+  log.debug("[+] Broadcasting %s.%i -> %s.%i" %
+    (packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
 
   p = packet
   while p:
