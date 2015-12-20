@@ -48,6 +48,7 @@ class Tutorial (object):
     Handles packet in messages from the switch.
     """
     packet = event.parsed # This is the parsed packet data.
+    log.debug("Handling in packets")
     if not packet.parsed:
       log.warning("Ignoring incomplete packet")
       return
