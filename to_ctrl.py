@@ -21,9 +21,30 @@ def _handle_PacketIn (event):
 
   global syn_counter
   packet =event.parsed
-  send_packet(event, of.OFPP_ALL)
-  log.debug("[+] Broadcasting %s.%i -> %s.%i" %
-    (packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
+
+  ipv4_pack = packet.find("ipv4")
+  if ipv4_pack:
+            log.debug("IP: "+str(ipv4_pack.srcip)+"<->"+str(ipv4_pack.dstip))
+            msg = of.ofp_flow_mod()
+            msg.priority = 20
+            msg.actions.append(of.ofp_action_output(port=of.OFPP_CONTROLLER))
+
+            # create generic match
+            match = of.ofp_match()
+
+            # policy in one direction
+            match.dl_src = "10.0.0.2"
+            msg.match = match
+            event.connection.send(msg)
+
+            match.dl_dst = "10.0.0.2"
+            msg.match = match
+            event.connection.send(msg)
+
+
+  #send_packet(event, of.OFPP_ALL)
+  #log.debug("[+] Broadcasting %s.%i -> %s.%i" %
+   # (packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
 
   p = packet
   while p:
