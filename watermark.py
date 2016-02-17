@@ -9,9 +9,11 @@ log = core.getLogger()
 syn_counter = 0
 counter_s1 = 1
 counter_s2 = 1
-samples1 = []
-samples2 = []
+watermark_samples = np.random.normal(1, 0.5, 500)
 mac_port_dict = {}
+protected_resources = ["00:00:00:00:00:03"]
+tainted_hosts = []
+watermarks_received_on_hosts = ["00:00:00:00:00:03", 0]
 
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
@@ -24,10 +26,31 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
   msg.actions.append(of.ofp_action_output(port = dst_port))
   event.connection.send(msg)
 
-def initialize_watermark_array(mu, sigma):
-  log.debug("creating watermaek array with params : "+ str(mu) + "    "+ str(sigma))
-  samples = np.random.normal(mu, sigma, 1000)
-  return samples
+def create_watermark(mu, sigma):
+  global watermark_samples
+  log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
+  samples = np.random.normal(mu, sigma, 500)
+  watermark_samples = np.vstack((watermark_samples, samples))
+
+def add_to_tainted_hosts(host):
+  global tainted_hosts
+  if (host in tainted_hosts):
+    tainted_hosts.append(host)
+    watermarks_received_on_hosts = vstack((watermarks_received_on_hosts, [host]))
+    log.debug("added %s to tainted_hosts list and watermarks received list")
+  else:
+    log.debug("host already present in tainted list")
+
+def add_to_watermarks_received_on_hosts(host, watermark):
+  hosts = [i[0] for i in watermarks_received_on_hosts]
+  if host in hosts:
+    watermarks_received_on_hosts[hosts.index(host)].append(watermark)
+    log.debug("appended watermark to list")
+  else:
+    log.debug("host not found in the watermarks_received_on_hosts list")
+
+def delete_flow_entries(event, packet):
+  log.debug("deleting flow table entries")
 
 def _handle_PacketIn (event):
 
@@ -36,9 +59,10 @@ def _handle_PacketIn (event):
   global backward_rule_set
   global counter_s1
   global counter_s2
-  global samples1
-  global samples2
   global mac_port_dict
+  global watermark_samples
+  global protected_resources
+  global tainted_hosts
   skip_add_to_dict = 0
 
   packet =event.parsed
@@ -47,17 +71,18 @@ def _handle_PacketIn (event):
     log.debug("IP packet in transit from  "+str(ipv4_pack.srcip)+"<->"+str(ipv4_pack.dstip))
 
   log.debug("packet forwarding  " + str(packet.src) + "  " + str(packet.dst))
-  if (str(packet.dst) == "00:00:00:00:00:03"):
+  if (str(packet.dst) in protected_resources):
     log.debug("***traffic going to protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict = 1
 
-  if (str(packet.src) == "00:00:00:00:00:03"):
+  if (str(packet.src) == in protected_resources):
     log.debug("*** traffic from protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
-    log.debug("****inserting"+str(samples1[counter_s1%1000])+" seconds delay here - src Protected***")
-    time.sleep(samples1[counter_s1 % 1000])
+    log.debug("****inserting"+str(watermark_samples[0, counter_s1%500])+" seconds delay here - src Protected***")
+    add_to_tainted_host(packet.dst)
+    time.sleep(samples1[watermark_samples[0, counter_s1%500]])
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
@@ -79,10 +104,8 @@ def _handle_PacketIn (event):
 
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
-  global samples1
-  global samples2
-  samples1 = initialize_watermark_array(1,0.3)
-  samples2 = initialize_watermark_array(2.5,1.2)
+  samples1 = create_watermark(1,0.3)
+  samples2 = create_watermark(2.5,1.2)
 
 def launch ():
   Timer(5,check_flows,recurring = True)
