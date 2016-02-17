@@ -35,11 +35,11 @@ def create_watermark(mu, sigma):
 def add_to_tainted_hosts(host):
   global tainted_hosts
   if (host in tainted_hosts):
+    log.debug("host already present in tainted list")
+  else:
     tainted_hosts.append(host)
     watermarks_received_on_hosts = vstack((watermarks_received_on_hosts, [host]))
     log.debug("added %s to tainted_hosts list and watermarks received list")
-  else:
-    log.debug("host already present in tainted list")
 
 def add_to_watermarks_received_on_hosts(host, watermark):
   hosts = [i[0] for i in watermarks_received_on_hosts]
@@ -77,12 +77,12 @@ def _handle_PacketIn (event):
     #send_packet(event, packet)
     skip_add_to_dict = 1
 
-  if (str(packet.src) == in protected_resources):
+  if (str(packet.src) in protected_resources):
     log.debug("*** traffic from protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     log.debug("****inserting"+str(watermark_samples[0, counter_s1%500])+" seconds delay here - src Protected***")
-    add_to_tainted_host(packet.dst)
-    time.sleep(samples1[watermark_samples[0, counter_s1%500]])
+    add_to_tainted_hosts(packet.dst)
+    time.sleep(watermark_samples[0, counter_s1%500])
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
@@ -104,11 +104,10 @@ def _handle_PacketIn (event):
 
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
-  samples1 = create_watermark(1,0.3)
-  samples2 = create_watermark(2.5,1.2)
+  create_watermark(1,0.3)
+  create_watermark(2.5,1.2)
 
 def launch ():
-  Timer(5,check_flows,recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
 
