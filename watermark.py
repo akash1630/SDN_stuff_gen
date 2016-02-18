@@ -99,6 +99,16 @@ def _handle_PacketIn (event):
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
+  if(str(packet.src) in tainted_hosts):
+    log.debug("***** traffic from  a tainted host *********")
+    log.debug("***FLow rule not added to switches. Send to controller***")
+    log.debug("****inserting"+str(watermark_samples[1][counter_s2%500])+" seconds delay here - src Protected***")
+    add_to_tainted_hosts(packet.dst)
+    delete_flow_entries(event, packet, packet.dst)
+    log.debug("counter index %i", counter_s2)
+    time.sleep(watermark_samples[0][counter_s2%500])
+    counter_s1 = counter_s2 + 1
+    skip_add_to_dict = 1
   if skip_add_to_dict != 1:
   	mac_port_dict[packet.src] = event.port
   if (packet.dst not in mac_port_dict or skip_add_to_dict == 1):
