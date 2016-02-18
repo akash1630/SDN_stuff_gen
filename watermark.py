@@ -9,11 +9,12 @@ log = core.getLogger()
 syn_counter = 0
 counter_s1 = 1
 counter_s2 = 1
-watermark_samples = [np.random.normal(1, 0.5, 500)]
+watermark_samples = []
+watermark_samples.append(np.random.normal(1, 0.5, 500))
 mac_port_dict = {}
 protected_resources = ["00:00:00:00:00:03"]
 tainted_hosts = []
-watermarks_received_on_hosts = [["00:00:00:00:00:03", 0]]
+watermarks_received_on_hosts = []
 
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
@@ -84,10 +85,10 @@ def _handle_PacketIn (event):
   if (str(packet.src) in protected_resources):
     log.debug("*** traffic from protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
-    log.debug("****inserting"+str(watermark_samples[0, counter_s1%500])+" seconds delay here - src Protected***")
+    log.debug("****inserting"+str(watermark_samples[0][counter_s1%500])+" seconds delay here - src Protected***")
     add_to_tainted_hosts(packet.dst)
     log.debug("counter index %i", counter_s1)
-    time.sleep(watermark_samples[0, counter_s1%500])
+    time.sleep(watermark_samples[0][counter_s1%500])
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
