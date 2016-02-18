@@ -100,12 +100,9 @@ def _handle_PacketIn (event):
      #send_packet(event, of.OFPP_ALL)
   if skip_add_to_dict != 1:
   	mac_port_dict[packet.src] = event.port
-  if (packet.dst not in mac_port_dict and skip_add_to_dict == 1):
+  if (packet.dst not in mac_port_dict or skip_add_to_dict == 1):
 	 flood_packet(event, of.OFPP_ALL)
-	 log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is 1")
-  elif packet.dst not in mac_port_dict:
-   flood_packet(event, of.OFPP_ALL)
-   log.debug("flooding to all ports as no entry in dictionary ")
+	 log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is %i", skip_add_to_dict)
   else:
 	 port = mac_port_dict[packet.dst]
 	 log.debug("setting a flow table entry as matching entry found in dict - " + str(packet.src) + "    " + str(packet.dst))
