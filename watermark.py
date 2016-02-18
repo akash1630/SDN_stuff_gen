@@ -57,7 +57,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
 def delete_flow_entries(event, packet, host_address):
   log.debug("deleting flow table entries for " + str(host_address))
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
-  msg.priority = 65635
+  #msg.priority = 65635
   msg.match.dl_src = str(host_address)
   event.connection.send(msg)
 
@@ -100,7 +100,7 @@ def _handle_PacketIn (event):
      #send_packet(event, of.OFPP_ALL)
   if skip_add_to_dict != 1:
   	mac_port_dict[packet.src] = event.port
-  if packet.dst not in mac_port_dict && skip_add_to_dict == 1:
+  if (packet.dst not in mac_port_dict and skip_add_to_dict == 1):
 	 flood_packet(event, of.OFPP_ALL)
 	 log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is 1")
   elif packet.dst not in mac_port_dict:
@@ -108,7 +108,7 @@ def _handle_PacketIn (event):
    log.debug("flooding to all ports as no entry in dictionary ")
   else:
 	 port = mac_port_dict[packet.dst]
-	 log.debug("setting a flow table entry - matching entry found in dict")
+	 log.debug("setting a flow table entry as matching entry found in dict - " + str(packet.src) + "    " + str(packet.dst))
 	 msg = of.ofp_flow_mod()
 	 #msg.priority = 1009
 	 msg.match = of.ofp_match.from_packet(packet, event.port)
