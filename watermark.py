@@ -18,6 +18,7 @@ watermarks_received_on_hosts = []
 
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
+  log.debug(str(event.ofp.buffer_id))
   if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
     msg.buffer_id = event.ofp.buffer_id
   else:
@@ -58,7 +59,7 @@ def delete_flow_entries(event, packet, host_address):
   log.debug("deleting flow table entries for " + str(host_address))
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
   #msg.priority = 65635
-  msg.match.dl_src = str(host_address)
+  msg.match.dl_src = host_address
   event.connection.send(msg)
 
 
