@@ -9,11 +9,11 @@ log = core.getLogger()
 syn_counter = 0
 counter_s1 = 1
 counter_s2 = 1
-watermark_samples = np.random.normal(1, 0.5, 500)
+watermark_samples = [np.random.normal(1, 0.5, 500)]
 mac_port_dict = {}
 protected_resources = ["00:00:00:00:00:03"]
 tainted_hosts = []
-watermarks_received_on_hosts = ["00:00:00:00:00:03", 0]
+watermarks_received_on_hosts = [["00:00:00:00:00:03", 0]]
 
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
@@ -30,15 +30,18 @@ def create_watermark(mu, sigma):
   global watermark_samples
   log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
   samples = np.random.normal(mu, sigma, 500)
-  watermark_samples = np.vstack((watermark_samples, samples))
+  #watermark_samples = np.vstack((watermark_samples, samples))
+  watermark_samples.append(samples)
 
 def add_to_tainted_hosts(host):
   global tainted_hosts
+  global watermarks_received_on_hosts
   if (host in tainted_hosts):
     log.debug("host already present in tainted list")
   else:
     tainted_hosts.append(host)
-    watermarks_received_on_hosts = vstack((watermarks_received_on_hosts, [host]))
+    #watermarks_received_on_hosts = np.vstack((watermarks_received_on_hosts, [host]))
+    #watermarks_received_on_hosts.append(h)
     log.debug("added %s to tainted_hosts list and watermarks received list")
 
 def add_to_watermarks_received_on_hosts(host, watermark):
@@ -48,6 +51,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
     log.debug("appended watermark to list")
   else:
     log.debug("host not found in the watermarks_received_on_hosts list")
+    watermarks_received_on_hosts.append([host, watermark])
 
 def delete_flow_entries(event, packet):
   log.debug("deleting flow table entries")
@@ -82,6 +86,7 @@ def _handle_PacketIn (event):
     log.debug("***FLow rule not added to switches. Send to controller***")
     log.debug("****inserting"+str(watermark_samples[0, counter_s1%500])+" seconds delay here - src Protected***")
     add_to_tainted_hosts(packet.dst)
+    log.debug("counter index %i", counter_s1)
     time.sleep(watermark_samples[0, counter_s1%500])
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
