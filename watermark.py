@@ -43,7 +43,7 @@ def add_to_tainted_hosts(host):
     tainted_hosts.append(host)
     #watermarks_received_on_hosts = np.vstack((watermarks_received_on_hosts, [host]))
     #watermarks_received_on_hosts.append(h)
-    log.debug("added %s to tainted_hosts list and watermarks received list")
+    log.debug("added %s to tainted_hosts list and watermarks received list", host)
 
 def add_to_watermarks_received_on_hosts(host, watermark):
   hosts = [i[0] for i in watermarks_received_on_hosts]
@@ -54,8 +54,13 @@ def add_to_watermarks_received_on_hosts(host, watermark):
     log.debug("host not found in the watermarks_received_on_hosts list")
     watermarks_received_on_hosts.append([host, watermark])
 
-def delete_flow_entries(event, packet):
-  log.debug("deleting flow table entries")
+def delete_flow_entries(event, packet, host_address):
+  log.debug("deleting flow table entries for " + host_address)
+  msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
+  msg.priority = 65635
+  msg.match.dl_src = host_address
+  event.connection.send(msg)
+
 
 def _handle_PacketIn (event):
 
@@ -87,6 +92,7 @@ def _handle_PacketIn (event):
     log.debug("***FLow rule not added to switches. Send to controller***")
     log.debug("****inserting"+str(watermark_samples[0][counter_s1%500])+" seconds delay here - src Protected***")
     add_to_tainted_hosts(packet.dst)
+    delete_flow_entries(event, packet, packet.dst)
     log.debug("counter index %i", counter_s1)
     time.sleep(watermark_samples[0][counter_s1%500])
     counter_s1 = counter_s1 + 1
