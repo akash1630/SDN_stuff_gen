@@ -14,7 +14,12 @@ watermark_samples.append(np.random.normal(1, 0.5, 500))
 mac_port_dict = {}
 protected_resources = ["00:00:00:00:00:03"]
 tainted_hosts = []
-watermarks_received_on_hosts = []
+watermarks_received_on_hosts = {}
+watermark_index = 0
+watermarks_created_for_hosts = {}
+watermarks_created_for_hosts[]
+for host in protected_resources:
+  watermarks_created_for_hosts[host] = 0
 
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
@@ -28,35 +33,43 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
   msg.actions.append(of.ofp_action_output(port = dst_port))
   event.connection.send(msg)
 
-def create_watermark(mu, sigma):
+def create_watermark(host, mu, sigma):
   global watermark_samples
-  log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
-  samples = np.random.normal(mu, sigma, 500)
-  #watermark_samples = np.vstack((watermark_samples, samples))
-  watermark_samples.append(samples)
+  global watermark_index
+  global watermarks_created_for_hosts
+  if watermarks_created_for_hosts.has_key(host):
+    log.debug("host has water creted already!")
+    return watermarks_created_for_hosts.get(host)
+  else:
+    log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
+    samples = np.random.normal(mu, sigma, 500)
+    #watermark_samples = np.vstack((watermark_samples, samples))
+    watermark_samples.append(samples)
+    watermark_index = watermark_index + 1
+    watermarks_created_for_hosts[host] = watermark_index
+    return watermark_index
 
 def add_to_tainted_hosts(host):
   global tainted_hosts
   global watermarks_received_on_hosts
-  if (str(host) in tainted_hosts):
+  if (host in tainted_hosts):
     log.debug("host already present in tainted list")
   else:
-    tainted_hosts.append(str(host))
+    tainted_hosts.append(host)
     #watermarks_received_on_hosts = np.vstack((watermarks_received_on_hosts, [host]))
     #watermarks_received_on_hosts.append(h)
-    log.debug("added %s to tainted_hosts list and watermarks received list", str(host))
+    log.debug("added %s to tainted_hosts list and watermarks received list", host)
 
 def add_to_watermarks_received_on_hosts(host, watermark):
-  hosts = [i[0] for i in watermarks_received_on_hosts]
-  if host in hosts:
-    watermarks_received_on_hosts[hosts.index(host)].append(watermark)
+  if watermarks_received_on_hosts.has_key(host):
     log.debug("appended watermark to list")
+    watermarks_received_on_hosts.get(host).append(watermark)
   else:
     log.debug("host not found in the watermarks_received_on_hosts list")
-    watermarks_received_on_hosts.append([host, watermark])
+    watermarks_received_on_hosts[host] = [watermark]
 
 def delete_flow_entries(event, packet, host_address):
-  log.debug("deleting flow table entries for " + str(host_address))
+  log.debug("deleting flow table entries for " + host_address)
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
   #msg.priority = 65635
   msg.match.dl_src = host_address
@@ -74,44 +87,56 @@ def _handle_PacketIn (event):
   global watermark_samples
   global protected_resources
   global tainted_hosts
+  global watermark_count
   skip_add_to_dict = 0
 
   packet =event.parsed
+
+  dest_eth_addr = str(packet.dst)
+  src_eth_addr = str(packet.src)
+
   ipv4_pack = packet.find("ipv4")
   if ipv4_pack:
     log.debug("IP packet in transit from  "+str(ipv4_pack.srcip)+"<->"+str(ipv4_pack.dstip))
 
-  log.debug("packet forwarding  " + str(packet.src) + "  " + str(packet.dst))
-  if (str(packet.dst) in protected_resources):
+  log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
+  if (dest_eth_addr in protected_resources):
     log.debug("***traffic going to protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict = 1
-  elif (str(packet.dst) in tainted_hosts):
+  elif (dest_eth_addr in tainted_hosts):
     log.debug("***traffic going to Tainted host ***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict = 1
 
-  if (str(packet.src) in protected_resources):
+  if (src_eth_addr in protected_resources):
     log.debug("*** traffic from protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     log.debug("****inserting"+str(watermark_samples[0][counter_s1%500])+" seconds delay here - src Protected***")
-    add_to_tainted_hosts(packet.dst)
-    delete_flow_entries(event, packet, packet.dst)
-    log.debug("counter index %i", counter_s1)
+    add_to_tainted_hosts(dest_eth_addr)
+    delete_flow_entries(event, packet, dest_eth_addr)
+    add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
+    index = random.randint(0,1000)
+    log.debug("index %i", index)
     time.sleep(watermark_samples[0][counter_s1%500])
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
-  elif(str(packet.src) in tainted_hosts):
+  elif(src_eth_addr in tainted_hosts):
     log.debug("***** traffic from  a tainted host *********")
     log.debug("***FLow rule not added to switches. Send to controller***")
-    log.debug("****inserting"+str(watermark_samples[1][counter_s2%500])+" seconds delay here - src Protected***")
-    add_to_tainted_hosts(packet.dst)
-    delete_flow_entries(event, packet, packet.dst)
-    log.debug("counter index %i", counter_s2)
-    time.sleep(watermark_samples[0][counter_s2%500])
+    add_to_tainted_hosts(dest_eth_addr)
+    delete_flow_entries(event, packet, dest_eth_addr)
+    add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
+    mu = random.uniform(0.5, 2.0)
+    sigma = random.uniform(0.2, 0.9)
+    watermark = create_watermark(src_eth_addr, mu, sigma)
+    index = random.randint(0,1000)
+    log.debug("index %i", index)
+    log.debug("****inserting"+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
+    time.sleep(watermark_samples[watermark][index])
     counter_s1 = counter_s2 + 1
     skip_add_to_dict = 1
   if skip_add_to_dict != 1:
@@ -121,9 +146,8 @@ def _handle_PacketIn (event):
     flood_packet(event, of.OFPP_ALL)
   else:
 	 port = mac_port_dict[packet.dst]
-	 log.debug("setting a flow table entry as matching entry found in dict - " + str(packet.src) + "    " + str(packet.dst))
+	 log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
 	 msg = of.ofp_flow_mod()
-	 #msg.priority = 1009
 	 msg.match = of.ofp_match.from_packet(packet, event.port)
 	 msg.priority = 1009
 	 msg.actions.append(of.ofp_action_output(port = port))
@@ -132,8 +156,6 @@ def _handle_PacketIn (event):
 
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
-  create_watermark(1,0.3)
-  create_watermark(2.5,1.2)
 
 def launch ():
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
