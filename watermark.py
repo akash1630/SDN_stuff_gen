@@ -41,10 +41,10 @@ def add_to_tainted_hosts(host):
   if (str(host) in tainted_hosts):
     log.debug("host already present in tainted list")
   else:
-    tainted_hosts.append(str(host)
+    tainted_hosts.append(str(host))
     #watermarks_received_on_hosts = np.vstack((watermarks_received_on_hosts, [host]))
     #watermarks_received_on_hosts.append(h)
-    log.debug("added %s to tainted_hosts list and watermarks received list", host)
+    log.debug("added %s to tainted_hosts list and watermarks received list", str(host))
 
 def add_to_watermarks_received_on_hosts(host, watermark):
   hosts = [i[0] for i in watermarks_received_on_hosts]
