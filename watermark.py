@@ -11,7 +11,7 @@ syn_counter = 0
 counter_s1 = 1
 counter_s2 = 1
 watermark_samples = []
-watermark_samples.append(np.random.normal(1, 0.5, 500))
+watermark_samples.append(np.random.normal(1, 0.5, 1000))
 mac_port_dict = {}
 protected_resources = ["00:00:00:00:00:03"]
 tainted_hosts = []
@@ -42,7 +42,7 @@ def create_watermark(host, mu, sigma):
     return watermarks_created_for_hosts.get(host)
   else:
     log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
-    samples = np.random.normal(mu, sigma, 500)
+    samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
     watermark_samples.append(samples)
     watermark_index = watermark_index + 1
@@ -52,7 +52,7 @@ def create_watermark(host, mu, sigma):
 def add_to_tainted_hosts(host):
   global tainted_hosts
   global watermarks_received_on_hosts
-  if (host in tainted_hosts):
+  if (host in tainted_hosts) or (host in protected_resources):
     log.debug("host already present in tainted list")
   else:
     tainted_hosts.append(host)
