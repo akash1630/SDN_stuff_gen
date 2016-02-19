@@ -69,6 +69,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
     watermarks_received_on_hosts[host] = [watermark]
 
 def delete_flow_entries(event, packet, host_address):
+  #if (host_address not in protected_resources)
   log.debug("deleting flow table entries for " + host_address)
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
   #msg.priority = 65635
@@ -120,7 +121,8 @@ def _handle_PacketIn (event):
     add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
     index = random.randint(0,1000)
     log.debug("index %i", index)
-    time.sleep(watermark_samples[0][counter_s1%500])
+    log.debug("****inserting"+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
+    time.sleep(watermark_samples[0][index])
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
