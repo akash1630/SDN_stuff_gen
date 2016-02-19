@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import random as random
 from pox.lib.recoco import Timer
 from pox.core import core
 import pox.openflow.libopenflow_01 as of
