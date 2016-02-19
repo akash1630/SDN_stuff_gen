@@ -38,10 +38,10 @@ def create_watermark(mu, sigma):
 def add_to_tainted_hosts(host):
   global tainted_hosts
   global watermarks_received_on_hosts
-  if (host in tainted_hosts):
+  if (str(host) in tainted_hosts):
     log.debug("host already present in tainted list")
   else:
-    tainted_hosts.append(host)
+    tainted_hosts.append(str(host)
     #watermarks_received_on_hosts = np.vstack((watermarks_received_on_hosts, [host]))
     #watermarks_received_on_hosts.append(h)
     log.debug("added %s to tainted_hosts list and watermarks received list", host)
@@ -87,6 +87,11 @@ def _handle_PacketIn (event):
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict = 1
+  elif (str(packet.dst) in tainted_hosts):
+    log.debug("***traffic going to Tainted host ***")
+    log.debug("***FLow rule not added to switches. Send to controller***")
+    #send_packet(event, packet)
+    skip_add_to_dict = 1
 
   if (str(packet.src) in protected_resources):
     log.debug("*** traffic from protected resource***")
@@ -99,7 +104,7 @@ def _handle_PacketIn (event):
     counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
-  if(str(packet.src) in tainted_hosts):
+  elif(str(packet.src) in tainted_hosts):
     log.debug("***** traffic from  a tainted host *********")
     log.debug("***FLow rule not added to switches. Send to controller***")
     log.debug("****inserting"+str(watermark_samples[1][counter_s2%500])+" seconds delay here - src Protected***")
