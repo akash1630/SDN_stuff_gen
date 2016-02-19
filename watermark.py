@@ -112,7 +112,7 @@ def _handle_PacketIn (event):
     #send_packet(event, packet)
     skip_add_to_dict = 1
 
-  if (src_eth_addr in protected_resources):
+  if (src_eth_addr in protected_resources) and (dest_eth_addr not in protected_resources):
     log.debug("*** traffic from protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     add_to_tainted_hosts(dest_eth_addr)
@@ -124,7 +124,7 @@ def _handle_PacketIn (event):
     time.sleep(watermark_samples[0][index])
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
-  elif(src_eth_addr in tainted_hosts):
+  elif(src_eth_addr in tainted_hosts) and (dest_eth_addr not in protected_resources):
     log.debug("***** traffic from  a tainted host *********")
     log.debug("***FLow rule not added to switches. Send to controller***")
     add_to_tainted_hosts(dest_eth_addr)
