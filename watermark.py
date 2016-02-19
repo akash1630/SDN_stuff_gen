@@ -17,7 +17,6 @@ tainted_hosts = []
 watermarks_received_on_hosts = {}
 watermark_index = 0
 watermarks_created_for_hosts = {}
-watermarks_created_for_hosts[]
 for host in protected_resources:
   watermarks_created_for_hosts[host] = 0
 
