@@ -9,8 +9,6 @@ from pox.lib.util import dpidToStr
 
 log = core.getLogger()
 syn_counter = 0
-counter_s1 = 1
-counter_s2 = 1
 watermark_samples = []
 watermark_samples.append(np.random.normal(1, 0.5, 1000))
 mac_port_dict = {}
@@ -39,7 +37,7 @@ def create_watermark(host, mu, sigma):
   global watermark_index
   global watermarks_created_for_hosts
   if watermarks_created_for_hosts.has_key(host):
-    log.debug("host has water creted already!")
+    log.debug("host has water created already!")
     return watermarks_created_for_hosts.get(host)
   else:
     log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
@@ -86,8 +84,6 @@ def _handle_PacketIn (event):
   global syn_counter
   global forward_rule_set
   global backward_rule_set
-  global counter_s1
-  global counter_s2
   global mac_port_dict
   global watermark_samples
   global protected_resources
@@ -119,15 +115,13 @@ def _handle_PacketIn (event):
   if (src_eth_addr in protected_resources):
     log.debug("*** traffic from protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
-    log.debug("****inserting"+str(watermark_samples[0][counter_s1%500])+" seconds delay here - src Protected***")
     add_to_tainted_hosts(dest_eth_addr)
     delete_flow_entries(event, packet, dest_eth_addr)
     add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
     index = random.randint(0,1000)
     log.debug("index %i", index)
-    log.debug("****inserting"+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
+    log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
     time.sleep(watermark_samples[0][index])
-    counter_s1 = counter_s1 + 1
     skip_add_to_dict = 1
      #send_packet(event, of.OFPP_ALL)
   elif(src_eth_addr in tainted_hosts):
@@ -141,9 +135,8 @@ def _handle_PacketIn (event):
     watermark = create_watermark(src_eth_addr, mu, sigma)
     index = random.randint(0,1000)
     log.debug("index %i", index)
-    log.debug("****inserting"+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
+    log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
     time.sleep(watermark_samples[watermark][index])
-    counter_s1 = counter_s2 + 1
     skip_add_to_dict = 1
   if skip_add_to_dict != 1:
   	mac_port_dict[packet.src] = event.port
