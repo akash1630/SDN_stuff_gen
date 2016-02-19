@@ -46,7 +46,7 @@ def create_watermark(host, mu, sigma):
     watermark_samples.append(samples)
     watermark_index = watermark_index + 1
     watermarks_created_for_hosts[host] = watermark_index
-    pprint(watermarks_created_for_hosts)
+    pprint.pprint(watermarks_created_for_hosts)
     return watermark_index
 
 def add_to_tainted_hosts(host):
@@ -65,7 +65,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
     if watermark not in watermarks_received_on_hosts.get(host):
       log.debug("appended watermark to list")
       watermarks_received_on_hosts.get(host).append(watermark)
-      pprint(watermarks_received_on_hosts)
+      pprint.pprint(watermarks_received_on_hosts)
   else:
     log.debug("host not found in the watermarks_received_on_hosts list")
     watermarks_received_on_hosts[host] = [watermark]
