@@ -124,7 +124,7 @@ def _handle_PacketIn (event):
     if(dest_eth_addr in protected_resources):
       log.debug("protected to protected communication")
       skip_add_to_dict_dest = 0
-    else
+    else:
       log.debug("*** traffic from protected resource***")
       log.debug("***FLow rule not added to switches. Send to controller***")
       add_to_tainted_hosts(dest_eth_addr)
