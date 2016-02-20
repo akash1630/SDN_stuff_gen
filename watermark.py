@@ -79,7 +79,7 @@ def delete_flow_entries(event, packet, host_address):
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
   #msg.priority = 65635
   msg.match.dl_src = host_address
-  event.connection.send(msg)
+  #event.connection.send(msg)
 
 
 def _handle_PacketIn (event):
