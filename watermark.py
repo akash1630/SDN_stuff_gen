@@ -146,8 +146,9 @@ def _handle_PacketIn (event):
   if (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
   	mac_port_dict[packet.src] = event.port
   if (packet.dst not in mac_port_dict):
+      log.debug(" skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
       if skip_add_to_dict_src != 1:
-        log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is %i", skip_add_to_dict)
+        log.debug("flooding to all ports as no entry in dictionary")
         flood_packet(event, of.OFPP_ALL)
   else:
 	 port = mac_port_dict[packet.dst]
