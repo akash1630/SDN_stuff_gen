@@ -71,6 +71,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
   else:
     log.debug("host not found in the watermarks_received_on_hosts list")
     watermarks_received_on_hosts[host] = [watermark]
+    pprint.pprint(watermarks_received_on_hosts)
 
 def delete_flow_entries(event, packet, host_address):
   #if (host_address not in protected_resources)
@@ -79,6 +80,7 @@ def delete_flow_entries(event, packet, host_address):
   #msg.priority = 65635
   msg.match.dl_src = host_address
   event.connection.send(msg)
+  log.debug("successfully sent delete flow message!!!!!!")
 
 
 def _handle_PacketIn (event):
