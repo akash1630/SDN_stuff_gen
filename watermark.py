@@ -148,11 +148,15 @@ def _handle_PacketIn (event):
     flood_packet(event, of.OFPP_ALL)
     delete_flow_entries(event, packet, dest_eth_addr)
 
-  if (packet.dst not in mac_port_dict) and (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
-    log.debug("  aadinng to dictionary and flooding all ports. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
-    mac_port_dict[packet.src] = event.port
-    flood_packet(event, of.OFPP_ALL)
+  if (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
+    log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+  	mac_port_dict[packet.src] = event.port
 
+  if (packet.dst not in mac_port_dict):
+    log.debug(" skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+    if skip_add_to_dict_src != 1 and skip_add_to_dict_dest != 1:
+      log.debug("flooding to all ports as no entry in dictionary")
+      flood_packet(event, of.OFPP_ALL)
   else:
 	 port = mac_port_dict[packet.dst]
 	 log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
