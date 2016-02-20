@@ -138,7 +138,7 @@ def _handle_PacketIn (event):
       delete_flow_entries(event, packet, dest_eth_addr)
        #send_packet(event, of.OFPP_ALL)
 
-  elif(src_eth_addr in tainted_hosts) and (dest_eth_addr not in protected_resources):
+  elif(src_eth_addr in tainted_hosts):
     if (dest_eth_addr in protected_resources):
       log.debug("tainted to protected communication")
       skip_add_to_dict_dest = 0
@@ -157,7 +157,7 @@ def _handle_PacketIn (event):
       delete_flow_entries(event, packet, dest_eth_addr)
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
-    log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+    log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     mac_port_dict[packet.src] = event.port
     if packet.dst not in mac_port_dict:
       log.debug("flooding to all ports as no entry in dictionary")
@@ -172,7 +172,7 @@ def _handle_PacketIn (event):
       msg.data = event.ofp
       event.connection.send(msg)
   elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
-    log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+    log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     flood_packet(event, of.OFPP_ALL)
 
 
