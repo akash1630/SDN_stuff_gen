@@ -150,7 +150,7 @@ def _handle_PacketIn (event):
 
   if (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
     log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
-  	mac_port_dict[packet.src] = event.port
+    mac_port_dict[packet.src] = event.port
 
   if (packet.dst not in mac_port_dict):
     log.debug(" skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
