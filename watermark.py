@@ -110,15 +110,15 @@ def _handle_PacketIn (event):
   log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
   if (dest_eth_addr in protected_resources):
     log.debug("***traffic going to protected resource***")
-    log.debug("***FLow rule not added to switches. Send to controller***")
+    #log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict_dest = 1
+    #skip_add_to_dict_dest = 1
 
   elif (dest_eth_addr in tainted_hosts):
     log.debug("***traffic going to Tainted host ***")
-    log.debug("***FLow rule not added to switches. Send to controller***")
+    #log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict_dest = 1
+    #skip_add_to_dict_dest = 1
 
   if (src_eth_addr in protected_resources):
     if(dest_eth_addr in protected_resources):
@@ -156,7 +156,7 @@ def _handle_PacketIn (event):
       flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, dest_eth_addr)
 
-  if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
+  if (skip_add_to_dict_src == 0):
     log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     mac_port_dict[packet.src] = event.port
     if packet.dst not in mac_port_dict:
@@ -171,7 +171,7 @@ def _handle_PacketIn (event):
       msg.actions.append(of.ofp_action_output(port = port))
       msg.data = event.ofp
       event.connection.send(msg)
-  elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
+  else:
     log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     flood_packet(event, of.OFPP_ALL)
 
