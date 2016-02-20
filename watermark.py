@@ -105,14 +105,14 @@ def _handle_PacketIn (event):
   log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
   if (dest_eth_addr in protected_resources):
     log.debug("***traffic going to protected resource***")
-    log.debug("***FLow rule not added to switches. Send to controller***")
+    #log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict = 1
+    #skip_add_to_dict = 1
   elif (dest_eth_addr in tainted_hosts):
     log.debug("***traffic going to Tainted host ***")
-    log.debug("***FLow rule not added to switches. Send to controller***")
+    #log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict = 1
+    #skip_add_to_dict = 1
 
   if (src_eth_addr in protected_resources):
     if (dest_eth_addr not in protected_resources):
