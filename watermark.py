@@ -73,13 +73,13 @@ def add_to_watermarks_received_on_hosts(host, watermark):
     watermarks_received_on_hosts[host] = [watermark]
     pprint.pprint(watermarks_received_on_hosts)
 
-def delete_flow_entries(event, packet, host_address):
+def delete_flow_entries(event, packet, host):
   #if (host_address not in protected_resources)
-  log.debug("deleting flow table entries for " + host_address)
+  log.debug("deleting flow table entries for " + str(host))
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
   #msg.priority = 65635
-  msg.match.dl_src = host_address
-  #event.connection.send(msg)
+  msg.match.dl_src = host
+  event.connection.send(msg)
   log.debug("successfully sent delete flow message!!!!!!")
 
 
@@ -135,7 +135,7 @@ def _handle_PacketIn (event):
       time.sleep(watermark_samples[0][index])
       skip_add_to_dict_src = 1
       flood_packet(event, of.OFPP_ALL)
-      delete_flow_entries(event, packet, dest_eth_addr)
+      delete_flow_entries(event, packet, packet.dst)
        #send_packet(event, of.OFPP_ALL)
 
   elif(src_eth_addr in tainted_hosts):
@@ -154,7 +154,7 @@ def _handle_PacketIn (event):
       time.sleep(watermark_samples[watermark][index])
       skip_add_to_dict_src = 1
       flood_packet(event, of.OFPP_ALL)
-      delete_flow_entries(event, packet, dest_eth_addr)
+      delete_flow_entries(event, packet, packet.dst)
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
