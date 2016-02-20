@@ -95,6 +95,8 @@ def _handle_PacketIn (event):
 
   packet =event.parsed
 
+  log.debug("packet in buffer_id check : " +str(event.ofp.buffer_id))
+
   dest_eth_addr = str(packet.dst)
   src_eth_addr = str(packet.src)
 
