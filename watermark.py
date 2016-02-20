@@ -118,19 +118,19 @@ def _handle_PacketIn (event):
     log.debug("*** traffic from protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     add_to_tainted_hosts(dest_eth_addr)
-    delete_flow_entries(event, packet, dest_eth_addr)
     add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
     index = random.randint(0,1000)
     log.debug("index %i", index)
     log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
     time.sleep(watermark_samples[0][index])
     skip_add_to_dict = 1
+    flood_packet(event, of.OFPP_ALL)
+    delete_flow_entries(event, packet, dest_eth_addr)
      #send_packet(event, of.OFPP_ALL)
   elif(src_eth_addr in tainted_hosts) and (dest_eth_addr not in protected_resources):
     log.debug("***** traffic from  a tainted host *********")
     log.debug("***FLow rule not added to switches. Send to controller***")
     add_to_tainted_hosts(dest_eth_addr)
-    delete_flow_entries(event, packet, dest_eth_addr)
     watermark = create_watermark(src_eth_addr, mu, sigma)
     add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
     index = random.randint(0,1000)
@@ -138,9 +138,11 @@ def _handle_PacketIn (event):
     log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
     time.sleep(watermark_samples[watermark][index])
     skip_add_to_dict = 1
+    flood_packet(event, of.OFPP_ALL)
+    delete_flow_entries(event, packet, dest_eth_addr)
   if skip_add_to_dict != 1:
   	mac_port_dict[packet.src] = event.port
-  if (packet.dst not in mac_port_dict or skip_add_to_dict == 1):
+  if (packet.dst not in mac_port_dict or skip_add_to_dict == 0):
     log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is %i", skip_add_to_dict)
     flood_packet(event, of.OFPP_ALL)
   else:
