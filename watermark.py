@@ -148,24 +148,22 @@ def _handle_PacketIn (event):
     flood_packet(event, of.OFPP_ALL)
     delete_flow_entries(event, packet, dest_eth_addr)
 
-  if (skip_add_to_dict_dest != 1) or (skip_add_to_dict_src != 1):
+  if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     mac_port_dict[packet.src] = event.port
-
-  if (packet.dst not in mac_port_dict):
-    log.debug(" skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
-    if skip_add_to_dict_src != 1 and skip_add_to_dict_dest != 1:
+    if packet.dst not in mac_port_dict:
       log.debug("flooding to all ports as no entry in dictionary")
       flood_packet(event, of.OFPP_ALL)
-  else:
-	 port = mac_port_dict[packet.dst]
-	 log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
-	 msg = of.ofp_flow_mod()
-	 msg.match = of.ofp_match.from_packet(packet, event.port)
-	 msg.priority = 1009
-	 msg.actions.append(of.ofp_action_output(port = port))
-	 msg.data = event.ofp
-	 event.connection.send(msg)
+    else:
+      port = mac_port_dict[packet.dst]
+      log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
+      msg = of.ofp_flow_mod()
+      msg.match = of.ofp_match.from_packet(packet, event.port)
+      msg.priority = 1009
+      msg.actions.append(of.ofp_action_output(port = port))
+      msg.data = event.ofp
+      event.connection.send(msg)
+
 
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
