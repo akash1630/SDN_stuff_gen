@@ -71,6 +71,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
   else:
     log.debug("host not found in the watermarks_received_on_hosts list")
     watermarks_received_on_hosts[host] = [watermark]
+    pprint.pprint(watermarks_received_on_hosts)
 
 def delete_flow_entries(event, packet, host_address):
   #if (host_address not in protected_resources)
@@ -115,7 +116,7 @@ def _handle_PacketIn (event):
     #skip_add_to_dict = 1
 
   if (src_eth_addr in protected_resources):
-    if (dest_eth_addr not in protected_resources):
+    if (dest_eth_addr in protected_resources):
       log.debug("*** traffic from protected resource to protected_resources***")
       skip_add_to_dict = 0
     else:
