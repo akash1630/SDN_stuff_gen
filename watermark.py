@@ -120,33 +120,41 @@ def _handle_PacketIn (event):
     #send_packet(event, packet)
     skip_add_to_dict_dest = 1
 
-  if (src_eth_addr in protected_resources) and (dest_eth_addr not in protected_resources):
-    log.debug("*** traffic from protected resource***")
-    log.debug("***FLow rule not added to switches. Send to controller***")
-    add_to_tainted_hosts(dest_eth_addr)
-    add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
-    index = random.randint(0,1000)
-    log.debug("index %i", index)
-    log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
-    time.sleep(watermark_samples[0][index])
-    skip_add_to_dict_src = 1
-    flood_packet(event, of.OFPP_ALL)
-    delete_flow_entries(event, packet, dest_eth_addr)
-     #send_packet(event, of.OFPP_ALL)
+  if (src_eth_addr in protected_resources):
+    if(dest_eth_addr in protected_resources):
+      log.debug("protected to protected communication")
+      skip_add_to_dict_dest = 0
+    else
+      log.debug("*** traffic from protected resource***")
+      log.debug("***FLow rule not added to switches. Send to controller***")
+      add_to_tainted_hosts(dest_eth_addr)
+      add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
+      index = random.randint(0,1000)
+      log.debug("index %i", index)
+      log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
+      #time.sleep(watermark_samples[0][index])
+      skip_add_to_dict_src = 1
+      flood_packet(event, of.OFPP_ALL)
+      delete_flow_entries(event, packet, dest_eth_addr)
+       #send_packet(event, of.OFPP_ALL)
 
   elif(src_eth_addr in tainted_hosts) and (dest_eth_addr not in protected_resources):
-    log.debug("***** traffic from  a tainted host *********")
-    log.debug("***FLow rule not added to switches. Send to controller***")
-    add_to_tainted_hosts(dest_eth_addr)
-    watermark = create_watermark(src_eth_addr, mu, sigma)
-    add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
-    index = random.randint(0,1000)
-    log.debug("index %i", index)
-    log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
-    time.sleep(watermark_samples[watermark][index])
-    skip_add_to_dict_src = 1
-    flood_packet(event, of.OFPP_ALL)
-    delete_flow_entries(event, packet, dest_eth_addr)
+    if (dest_eth_addr in protected_resources):
+      log.debug("tainted to protected communication")
+      skip_add_to_dict_dest = 0
+    else:
+      log.debug("***** traffic from  a tainted host *********")
+      log.debug("***FLow rule not added to switches. Send to controller***")
+      add_to_tainted_hosts(dest_eth_addr)
+      watermark = create_watermark(src_eth_addr)
+      add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
+      index = random.randint(0,1000)
+      log.debug("index %i", index)
+      log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
+      #time.sleep(watermark_samples[watermark][index])
+      skip_add_to_dict_src = 1
+      flood_packet(event, of.OFPP_ALL)
+      delete_flow_entries(event, packet, dest_eth_addr)
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
