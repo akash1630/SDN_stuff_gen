@@ -22,7 +22,7 @@ for host in protected_resources:
 
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
-  log.debug(str(event.ofp.buffer_id))
+  log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
   if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
     msg.buffer_id = event.ofp.buffer_id
   else:
