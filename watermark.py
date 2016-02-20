@@ -132,7 +132,7 @@ def _handle_PacketIn (event):
       index = random.randint(0,1000)
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
-      #time.sleep(watermark_samples[0][index])
+      time.sleep(watermark_samples[0][index])
       skip_add_to_dict_src = 1
       flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, dest_eth_addr)
@@ -151,7 +151,7 @@ def _handle_PacketIn (event):
       index = random.randint(0,1000)
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
-      #time.sleep(watermark_samples[watermark][index])
+      time.sleep(watermark_samples[watermark][index])
       skip_add_to_dict_src = 1
       flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, dest_eth_addr)
