@@ -22,7 +22,7 @@ for host in protected_resources:
 
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
-  log.debug(str(event.ofp.buffer_id))
+  log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
   if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
     msg.buffer_id = event.ofp.buffer_id
   else:
@@ -154,7 +154,9 @@ def _handle_PacketIn (event):
     log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is %i", skip_add_to_dict)
     flood_packet(event, of.OFPP_ALL)
   elif (packet.dst not in mac_port_dict and skip_add_to_dict == 1):
-    log.debug("**** packet has already been flooded ******")
+    log.debug(" ----- Entry not found in dictpacket has already been flooded -----")
+  elif (packet.dst in mac_port_dict and skip_add_to_dict == 1):
+    log.debug("**** Entry fround in dict but packet has already been flooded ******")
   else:
 	 port = mac_port_dict[packet.dst]
 	 log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
