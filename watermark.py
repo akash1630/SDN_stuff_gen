@@ -32,14 +32,16 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
   msg.actions.append(of.ofp_action_output(port = dst_port))
   event.connection.send(msg)
 
-def create_watermark(host, mu, sigma):
+def create_watermark(host):
   global watermark_samples
   global watermark_index
   global watermarks_created_for_hosts
   if watermarks_created_for_hosts.has_key(host):
-    log.debug("host has water created already!")
+    log.debug("host has watermark created already!")
     return watermarks_created_for_hosts.get(host)
   else:
+    mu = random.uniform(0.5, 2.0)
+    sigma = random.uniform(0.2, 0.9)
     log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
     samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
@@ -58,7 +60,7 @@ def add_to_tainted_hosts(host):
     tainted_hosts.append(host)
     #watermarks_received_on_hosts = np.vstack((watermarks_received_on_hosts, [host]))
     #watermarks_received_on_hosts.append(h)
-    log.debug("added %s to tainted_hosts list and watermarks received list", host)
+    log.debug("added %s to tainted_hosts list ", host)
 
 def add_to_watermarks_received_on_hosts(host, watermark):
   if watermarks_received_on_hosts.has_key(host):
@@ -129,10 +131,8 @@ def _handle_PacketIn (event):
     log.debug("***FLow rule not added to switches. Send to controller***")
     add_to_tainted_hosts(dest_eth_addr)
     delete_flow_entries(event, packet, dest_eth_addr)
-    add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
-    mu = random.uniform(0.5, 2.0)
-    sigma = random.uniform(0.2, 0.9)
     watermark = create_watermark(src_eth_addr, mu, sigma)
+    add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
     index = random.randint(0,1000)
     log.debug("index %i", index)
     log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
