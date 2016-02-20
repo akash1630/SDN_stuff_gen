@@ -91,7 +91,8 @@ def _handle_PacketIn (event):
   global protected_resources
   global tainted_hosts
   global watermark_count
-  skip_add_to_dict = 0
+  skip_add_to_dict_dest = 0
+  skip_add_to_dict_src = 0
 
   packet =event.parsed
 
@@ -109,12 +110,12 @@ def _handle_PacketIn (event):
     log.debug("***traffic going to protected resource***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict = 1
+    skip_add_to_dict_dest = 1
   elif (dest_eth_addr in tainted_hosts):
     log.debug("***traffic going to Tainted host ***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict = 1
+    skip_add_to_dict_dest = 1
 
   if (src_eth_addr in protected_resources) and (dest_eth_addr not in protected_resources):
     log.debug("*** traffic from protected resource***")
@@ -125,7 +126,7 @@ def _handle_PacketIn (event):
     log.debug("index %i", index)
     log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
     time.sleep(watermark_samples[0][index])
-    skip_add_to_dict = 1
+    skip_add_to_dict_src = 1
     flood_packet(event, of.OFPP_ALL)
     delete_flow_entries(event, packet, dest_eth_addr)
      #send_packet(event, of.OFPP_ALL)
@@ -139,13 +140,13 @@ def _handle_PacketIn (event):
     log.debug("index %i", index)
     log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
     time.sleep(watermark_samples[watermark][index])
-    skip_add_to_dict = 1
+    skip_add_to_dict_src = 1
     flood_packet(event, of.OFPP_ALL)
     delete_flow_entries(event, packet, dest_eth_addr)
-  if skip_add_to_dict != 1:
+  if (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
   	mac_port_dict[packet.src] = event.port
   if (packet.dst not in mac_port_dict):
-      if skip_add_to_dict != 1:
+      if skip_add_to_dict_src != 1:
         log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is %i", skip_add_to_dict)
         flood_packet(event, of.OFPP_ALL)
   else:
