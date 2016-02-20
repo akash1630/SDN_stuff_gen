@@ -80,6 +80,7 @@ def delete_flow_entries(event, packet, host_address):
   #msg.priority = 65635
   msg.match.dl_src = host_address
   #event.connection.send(msg)
+  log.debug("successfully sent delete flow message!!!!!!")
 
 
 def _handle_PacketIn (event):
@@ -92,9 +93,12 @@ def _handle_PacketIn (event):
   global protected_resources
   global tainted_hosts
   global watermark_count
-  skip_add_to_dict = 0
+  skip_add_to_dict_dest = 0
+  skip_add_to_dict_src = 0
 
   packet =event.parsed
+
+  log.debug("packet in buffer_id check : " +str(event.ofp.buffer_id))
 
   dest_eth_addr = str(packet.dst)
   src_eth_addr = str(packet.src)
@@ -106,19 +110,20 @@ def _handle_PacketIn (event):
   log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
   if (dest_eth_addr in protected_resources):
     log.debug("***traffic going to protected resource***")
-    #log.debug("***FLow rule not added to switches. Send to controller***")
+    log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    #skip_add_to_dict = 1
+    skip_add_to_dict_dest = 1
+
   elif (dest_eth_addr in tainted_hosts):
     log.debug("***traffic going to Tainted host ***")
-    #log.debug("***FLow rule not added to switches. Send to controller***")
+    log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    #skip_add_to_dict = 1
+    skip_add_to_dict_dest = 1
 
   if (src_eth_addr in protected_resources):
-    if (dest_eth_addr in protected_resources):
-      log.debug("*** traffic from protected resource to protected_resources***")
-      skip_add_to_dict = 0
+    if(dest_eth_addr in protected_resources):
+      log.debug("protected to protected communication")
+      skip_add_to_dict_dest = 0
     else:
       log.debug("*** traffic from protected resource***")
       log.debug("***FLow rule not added to switches. Send to controller***")
@@ -127,45 +132,49 @@ def _handle_PacketIn (event):
       index = random.randint(0,1000)
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
-      time.sleep(watermark_samples[0][index])
-      skip_add_to_dict = 1
+      #time.sleep(watermark_samples[0][index])
+      skip_add_to_dict_src = 1
       flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, dest_eth_addr)
-      #send_packet(event, of.OFPP_ALL)
-    
-  elif(src_eth_addr in tainted_hosts) and (dest_eth_addr not in protected_resources):
-    log.debug("***** traffic from  a tainted host *********")
-    log.debug("***FLow rule not added to switches. Send to controller***")
-    add_to_tainted_hosts(dest_eth_addr)
-    watermark = create_watermark(src_eth_addr, mu, sigma)
-    add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
-    index = random.randint(0,1000)
-    log.debug("index %i", index)
-    log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
-    time.sleep(watermark_samples[watermark][index])
-    skip_add_to_dict = 1
-    flood_packet(event, of.OFPP_ALL)
-    delete_flow_entries(event, packet, dest_eth_addr)
+       #send_packet(event, of.OFPP_ALL)
 
-  if skip_add_to_dict != 1:
-  	mac_port_dict[packet.src] = event.port
+  elif(src_eth_addr in tainted_hosts):
+    if (dest_eth_addr in protected_resources):
+      log.debug("tainted to protected communication")
+      skip_add_to_dict_dest = 0
+    else:
+      log.debug("***** traffic from  a tainted host *********")
+      log.debug("***FLow rule not added to switches. Send to controller***")
+      add_to_tainted_hosts(dest_eth_addr)
+      watermark = create_watermark(src_eth_addr)
+      add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
+      index = random.randint(0,1000)
+      log.debug("index %i", index)
+      log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
+      #time.sleep(watermark_samples[watermark][index])
+      skip_add_to_dict_src = 1
+      flood_packet(event, of.OFPP_ALL)
+      delete_flow_entries(event, packet, dest_eth_addr)
 
-  if (packet.dst not in mac_port_dict and skip_add_to_dict == 0):
-    log.debug("flooding to all ports as no entry in dictionary and skip_add_to_dict is %i", skip_add_to_dict)
+  if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
+    log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+    mac_port_dict[packet.src] = event.port
+    if packet.dst not in mac_port_dict:
+      log.debug("flooding to all ports as no entry in dictionary")
+      flood_packet(event, of.OFPP_ALL)
+    else:
+      port = mac_port_dict[packet.dst]
+      log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
+      msg = of.ofp_flow_mod()
+      msg.match = of.ofp_match.from_packet(packet, event.port)
+      msg.priority = 1009
+      msg.actions.append(of.ofp_action_output(port = port))
+      msg.data = event.ofp
+      event.connection.send(msg)
+  elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
+    log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     flood_packet(event, of.OFPP_ALL)
-  elif (packet.dst not in mac_port_dict and skip_add_to_dict == 1):
-    log.debug(" ----- Entry not found in dictpacket has already been flooded -----")
-  elif (packet.dst in mac_port_dict and skip_add_to_dict == 1):
-    log.debug("**** Entry fround in dict but packet has already been flooded ******")
-  else:
-	 port = mac_port_dict[packet.dst]
-	 log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
-	 msg = of.ofp_flow_mod()
-	 msg.match = of.ofp_match.from_packet(packet, event.port)
-	 msg.priority = 1009
-	 msg.actions.append(of.ofp_action_output(port = port))
-	 msg.data = event.ofp
-	 event.connection.send(msg)
+
 
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
