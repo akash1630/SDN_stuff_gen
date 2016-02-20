@@ -111,11 +111,14 @@ def _handle_PacketIn (event):
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict_dest = 1
+    flood_packet(event, of.OFPP_ALL)
+
   elif (dest_eth_addr in tainted_hosts):
     log.debug("***traffic going to Tainted host ***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict_dest = 1
+    flood_packet(event, of.OFPP_ALL)
 
   if (src_eth_addr in protected_resources) and (dest_eth_addr not in protected_resources):
     log.debug("*** traffic from protected resource***")
@@ -130,6 +133,7 @@ def _handle_PacketIn (event):
     flood_packet(event, of.OFPP_ALL)
     delete_flow_entries(event, packet, dest_eth_addr)
      #send_packet(event, of.OFPP_ALL)
+
   elif(src_eth_addr in tainted_hosts) and (dest_eth_addr not in protected_resources):
     log.debug("***** traffic from  a tainted host *********")
     log.debug("***FLow rule not added to switches. Send to controller***")
@@ -143,13 +147,11 @@ def _handle_PacketIn (event):
     skip_add_to_dict_src = 1
     flood_packet(event, of.OFPP_ALL)
     delete_flow_entries(event, packet, dest_eth_addr)
-  if (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
+
+  if (packet.dst not in mac_port_dict) and (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
+    log.debug("  aadinng to dictionary and flooding all ports. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
   	mac_port_dict[packet.src] = event.port
-  if (packet.dst not in mac_port_dict):
-      log.debug(" skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
-      if skip_add_to_dict_src != 1:
-        log.debug("flooding to all ports as no entry in dictionary")
-        flood_packet(event, of.OFPP_ALL)
+    flood_packet(event, of.OFPP_ALL)
   else:
 	 port = mac_port_dict[packet.dst]
 	 log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
