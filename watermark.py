@@ -113,14 +113,12 @@ def _handle_PacketIn (event):
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict_dest = 1
-    flood_packet(event, of.OFPP_ALL)
 
   elif (dest_eth_addr in tainted_hosts):
     log.debug("***traffic going to Tainted host ***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
     skip_add_to_dict_dest = 1
-    flood_packet(event, of.OFPP_ALL)
 
   if (src_eth_addr in protected_resources) and (dest_eth_addr not in protected_resources):
     log.debug("*** traffic from protected resource***")
@@ -165,6 +163,9 @@ def _handle_PacketIn (event):
       msg.actions.append(of.ofp_action_output(port = port))
       msg.data = event.ofp
       event.connection.send(msg)
+  elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
+    log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+    flood_packet(event, of.OFPP_ALL)
 
 
 def _handle_ConnectionUp (event):
