@@ -148,7 +148,7 @@ def _handle_PacketIn (event):
     flood_packet(event, of.OFPP_ALL)
     delete_flow_entries(event, packet, dest_eth_addr)
 
-  if (skip_add_to_dict_dest != 1) and (skip_add_to_dict_src != 1):
+  if (skip_add_to_dict_dest != 1) or (skip_add_to_dict_src != 1):
     log.debug("  aadinng to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     mac_port_dict[packet.src] = event.port
 
