@@ -136,7 +136,8 @@ def _handle_PacketIn (event):
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
       #time.sleep(watermark_samples[0][index])
-      Timer(watermark_samples[0][index], delay_and_flood ,event)
+      #Timer(watermark_samples[0][index], delay_and_flood, event)
+      core.callDelayed(watermark_samples[0][index], delay_and_flood, event)
       skip_add_to_dict_src = 1
       #flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, packet.dst)
@@ -156,8 +157,8 @@ def _handle_PacketIn (event):
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
       #time.sleep(watermark_samples[watermark][index])
-      delay_and_flood(packet)
-      Timer(watermark_samples[watermark][index], delay_and_flood ,event)
+      #Timer(watermark_samples[watermark][index], delay_and_flood , event)
+      core.callDelayed(watermark_samples[watermark][index], delay_and_flood , event)
       skip_add_to_dict_src = 1
       #flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, packet.dst)
