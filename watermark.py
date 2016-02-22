@@ -13,10 +13,15 @@ watermark_samples = []
 watermark_samples.append(np.random.normal(1, 0.5, 1000))
 mac_port_dict = {}
 protected_resources = ["00:00:00:00:00:03"]
-tainted_hosts = []
+tainted_hosts = {}
+last_watermarked_flow_time = {}
 watermarks_received_on_hosts = {}
 watermark_index = 0
 watermarks_created_for_hosts = {}
+correlated_flows = {}
+suspected_hosts = []
+
+
 for host in protected_resources:
   watermarks_created_for_hosts[host] = 0
 
@@ -54,13 +59,14 @@ def create_watermark(host):
 def add_to_tainted_hosts(host):
   global tainted_hosts
   global watermarks_received_on_hosts
-  if (host in tainted_hosts) or (host in protected_resources):
+  if (tainted_hosts.has_key(host)) or (host in protected_resources):
     log.debug("host already present in tainted list")
   else:
-    tainted_hosts.append(host)
+    tainted_hosts[host] = time.time()
     #watermarks_received_on_hosts = np.vstack((watermarks_received_on_hosts, [host]))
     #watermarks_received_on_hosts.append(h)
     log.debug("added %s to tainted_hosts list ", host)
+  last_watermarked_flow_time[host] = time.time()
 
 def add_to_watermarks_received_on_hosts(host, watermark):
   if watermarks_received_on_hosts.has_key(host):
@@ -85,6 +91,18 @@ def delete_flow_entries(event, packet, host):
 def delay_and_flood(event):
   log.debug("++++++++++ flooding after wait ++++++++++++")
   flood_packet(event, of.OFPP_ALL)
+
+def prune_tainted_list():
+  log.debug("****** pruning tainted hosts list **********")
+  marked_for_deletion = []
+  for key in tainted_hosts.keys():
+    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 901):
+      if time.time() - last_watermarked_flow_time[key] >= 901:
+        marked_for_deletion.append(key)
+  for host in marked_for_deletion:
+    del tainted_hosts[host]
+  log.debug(" ****** deleted %i hosts from the tainted list *********", len(marked_for_deletion))
+
 
 def _handle_PacketIn (event):
 
@@ -117,7 +135,7 @@ def _handle_PacketIn (event):
     #send_packet(event, packet)
     skip_add_to_dict_dest = 1
 
-  elif (dest_eth_addr in tainted_hosts):
+  elif (tainted_hosts.has_key(dest_eth_addr)):
     log.debug("***traffic going to Tainted host ***")
     log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
@@ -143,7 +161,7 @@ def _handle_PacketIn (event):
       delete_flow_entries(event, packet, packet.dst)
        #send_packet(event, of.OFPP_ALL)
 
-  elif(src_eth_addr in tainted_hosts):
+  elif(tainted_hosts.has_key(src_eth_addr)):
     if (dest_eth_addr in protected_resources):
       log.debug("tainted to protected communication")
       skip_add_to_dict_dest = 0
@@ -187,6 +205,7 @@ def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
 
 def launch ():
+  Timer(900, prune_tainted_list, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
 
