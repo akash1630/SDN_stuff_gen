@@ -82,7 +82,6 @@ def delete_flow_entries(event, packet, host):
   event.connection.send(msg)
   log.debug("successfully sent delete flow message!!!!!!")
 
-
 def _handle_PacketIn (event):
 
   global syn_counter
@@ -132,9 +131,10 @@ def _handle_PacketIn (event):
       index = random.randint(0,1000)
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
-      time.sleep(watermark_samples[0][index])
+      #time.sleep(watermark_samples[0][index])
+      Timer(watermark_samples[0][index], flood_packet ,event, of.OFPP_ALL)
       skip_add_to_dict_src = 1
-      flood_packet(event, of.OFPP_ALL)
+      #flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, packet.dst)
        #send_packet(event, of.OFPP_ALL)
 
@@ -151,9 +151,10 @@ def _handle_PacketIn (event):
       index = random.randint(0,1000)
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
-      time.sleep(watermark_samples[watermark][index])
+      #time.sleep(watermark_samples[watermark][index])
+      Timer(watermark_samples[watermark][index], flood_packet ,event, of.OFPP_ALL)
       skip_add_to_dict_src = 1
-      flood_packet(event, of.OFPP_ALL)
+      #flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, packet.dst)
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
