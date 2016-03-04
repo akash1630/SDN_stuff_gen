@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import time
 import random as random
 import pprint
@@ -102,6 +103,19 @@ def prune_tainted_list():
   for host in marked_for_deletion:
     del tainted_hosts[host]
   log.debug(" ****** deleted %i hosts from the tainted list *********", len(marked_for_deletion))
+
+def check_distribution(ipd_array):
+  chi_stats = sp.stats.normaltest(ipd_array)
+  p_val = chi_stats[1]
+  if p_val > 0.1:
+    return 
+  return 0
+
+def find_mu_sigma(ipd_array):
+  mu_sigma_tuple = ()
+  mu_sigma_tuple[0] = ipd_array.mean()
+  mu_sigma_tuple[1] = numpy.std(ipd_array, axis = None)
+  return mu_sigma_tuple
 
 
 def _handle_PacketIn (event):
