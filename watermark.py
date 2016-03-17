@@ -108,7 +108,7 @@ def check_distribution(ipd_array):
   chi_stats = sp.stats.normaltest(ipd_array)
   p_val = chi_stats[1]
   if p_val > 0.1:
-    return 
+    return 1
   return 0
 
 def find_mu_sigma(ipd_array):
