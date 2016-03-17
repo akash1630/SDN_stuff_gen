@@ -219,7 +219,7 @@ def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
 
 def launch ():
-  Timer(900, prune_tainted_list, recurring = True)
+  Timer(90, prune_tainted_list, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
 
