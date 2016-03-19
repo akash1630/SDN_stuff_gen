@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import stats as scipy.stats
 import time
 import random as random
 import pprint
@@ -128,7 +129,7 @@ def update_ipd_arrays(src_eth_addr, dest_eth_addr):
 
 def check_distribution(ipd_array):
   log.debug(" Checking for a normal distribution")
-  chi_stats = sp.stats.normaltest(ipd_array)
+  chi_stats = stats.normaltest(ipd_array)
   p_val = chi_stats[1]
   if p_val > 0.1:
     log.debug("******** Sample follows a normal distribution *********")
