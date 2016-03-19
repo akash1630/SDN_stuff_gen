@@ -51,10 +51,10 @@ def create_watermark(host):
   else:
     mu = random.uniform(0.5, 2.0)
     sigma = random.uniform(0.2, 0.9)
-    mu_sigma_tuple = ()
-    mu_sigma_tuple[0] = mu
-    mu_sigma_tuple[1] = sigma
-    watermark_index_to_params_map[watermark_index] = mu_sigma_tuple
+    mu_sigma_vals = []
+    mu_sigma_vals[0] = mu
+    mu_sigma_vals[1] = sigma
+    watermark_index_to_params_map[watermark_index] = mu_sigma_vals
     log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
     samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
@@ -138,13 +138,13 @@ def check_distribution(ipd_array):
 
 def find_mu_sigma(ipd_array):
   log.debug(" calculating mu and sigma for a normal distribution")
-  mu_sigma_tuple = ()
-  mu_sigma_tuple[0] = ipd_array.mean()
-  mu_sigma_tuple[1] = numpy.std(ipd_array, axis = None)
-  log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_tuple[0], mu_sigma_tuple[1])
-  return mu_sigma_tuple
+  mu_sigma_vals = []
+  mu_sigma_vals[0] = ipd_array.mean()
+  mu_sigma_vals[1] = numpy.std(ipd_array, axis = None)
+  log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
+  return mu_sigma_vals
 
-def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_tuple):
+def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals):
   log.debug("**** performing correlation tests for src: "+ src_eth_addr + " dest: " + dest_eth_addr)
   watermarks_to_check = []
   key = src_eth_addr + dest_eth_addr
@@ -155,7 +155,7 @@ def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_tuple):
     return
   for watermark_index in watermarks_to_check:
     recorded_mu_sigma = watermark_index_to_params_map[watermark_index]
-    if (mu_sigma_tuple[0] == recorded_mu_sigma[0]) and (mu_sigma_tuple[1] == recorded_mu_sigma[1]):
+    if (mu_sigma_vals[0] == recorded_mu_sigma[0]) and (mu_sigma_vals[1] == recorded_mu_sigma[1]):
       log.debug(" ########### correlation found : %s -> %s  ###########", src_eth_addr, dest_eth_addr)
       del flow_ipds[key]
       del flow_last_packet_time[key]
@@ -177,7 +177,7 @@ def _handle_PacketIn (event):
   global watermark_count
   skip_add_to_dict_dest = 0
   skip_add_to_dict_src = 0
-  mu_sigma_tuple = ()
+  mu_sigma_vals = []
 
   packet =event.parsed
 
@@ -229,7 +229,7 @@ def _handle_PacketIn (event):
 
     if (len(flow_ipd_array) >= 100):
       if (check_distribution(flow_ipd_array) == 1):
-        mu_sigma_tuple = find_mu_sigma(flow_ipd_array)
+        mu_sigma_vals = find_mu_sigma(flow_ipd_array)
 
     if (dest_eth_addr in protected_resources):
       log.debug("tainted to protected communication")
