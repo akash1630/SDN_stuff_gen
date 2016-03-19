@@ -116,7 +116,8 @@ def prune_tainted_list():
 def update_ipd_arrays(src_eth_addr, dest_eth_addr):
   key = src_eth_addr + dest_eth_addr
   log.debug(" updating ipd array for : " + key)
-  curr_time = time.time();
+  curr_time = time.time()
+  packet_delay = 0
   if flow_last_packet_time.has_key(key):
     packet_delay = curr_time - flow_last_packet_time[key]
   flow_last_packet_time[key] = curr_time
@@ -130,7 +131,9 @@ def check_distribution(ipd_array):
   chi_stats = sp.stats.normaltest(ipd_array)
   p_val = chi_stats[1]
   if p_val > 0.1:
+    log.debug("******** Sample follows a normal distribution *********")
     return 1
+  log.debug(" ------- sample Does Not follow a normal distribution ----------")
   return 0
 
 def find_mu_sigma(ipd_array):
@@ -138,11 +141,13 @@ def find_mu_sigma(ipd_array):
   mu_sigma_tuple = ()
   mu_sigma_tuple[0] = ipd_array.mean()
   mu_sigma_tuple[1] = numpy.std(ipd_array, axis = None)
+  log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_tuple[0], mu_sigma_tuple[1])
   return mu_sigma_tuple
 
 def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_tuple):
   log.debug("**** performing correlation tests for src: "+ src_eth_addr + " dest: " + dest_eth_addr)
   watermarks_to_check = []
+  key = src_eth_addr + dest_eth_addr
   if (watermarks_received_on_hosts.has_key(src_eth_addr)):
     watermarks_to_check = watermarks_received_on_hosts[src_eth_addr]
   else:
@@ -151,7 +156,13 @@ def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_tuple):
   for watermark_index in watermarks_to_check:
     recorded_mu_sigma = watermark_index_to_params_map[watermark_index]
     if (mu_sigma_tuple[0] == recorded_mu_sigma[0]) and (mu_sigma_tuple[1] == recorded_mu_sigma[1]):
+      log.debug(" ########### correlation found : %s -> %s  ###########", src_eth_addr, dest_eth_addr)
+      del flow_ipds[key]
+      del flow_last_packet_time[key]
       return 1
+  log.debug(" --------- No correlation found ------------")
+  del flow_ipds[key]
+  del flow_last_packet_time[key]
   return 0
 
 def _handle_PacketIn (event):
