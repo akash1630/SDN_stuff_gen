@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-import stats as scipy.stats
+import scipy.stats as stats
 import time
 import random as random
 import pprint
