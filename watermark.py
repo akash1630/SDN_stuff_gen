@@ -77,6 +77,7 @@ def add_to_tainted_hosts(host):
   last_watermarked_flow_time[host] = time.time()
 
 def add_to_watermarks_received_on_hosts(host, watermark):
+  global watermarks_received_on_hosts
   if watermarks_received_on_hosts.has_key(host):
     if watermark not in watermarks_received_on_hosts.get(host):
       log.debug("appended watermark to list")
@@ -165,7 +166,7 @@ def _handle_PacketIn (event):
   global watermark_count
   skip_add_to_dict_dest = 0
   skip_add_to_dict_src = 0
-  mu_sigma_tuple()
+  mu_sigma_tuple = ()
 
   packet =event.parsed
 
