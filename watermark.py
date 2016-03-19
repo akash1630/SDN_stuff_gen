@@ -51,7 +51,7 @@ def create_watermark(host):
   else:
     mu = random.uniform(0.5, 2.0)
     sigma = random.uniform(0.2, 0.9)
-    mu_sigma_vals = []
+    mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
     watermark_index_to_params_map[watermark_index] = mu_sigma_vals
@@ -138,7 +138,7 @@ def check_distribution(ipd_array):
 
 def find_mu_sigma(ipd_array):
   log.debug(" calculating mu and sigma for a normal distribution")
-  mu_sigma_vals = []
+  mu_sigma_vals = [0,0]
   mu_sigma_vals[0] = ipd_array.mean()
   mu_sigma_vals[1] = numpy.std(ipd_array, axis = None)
   log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
@@ -177,7 +177,7 @@ def _handle_PacketIn (event):
   global watermark_count
   skip_add_to_dict_dest = 0
   skip_add_to_dict_src = 0
-  mu_sigma_vals = []
+  mu_sigma_vals = [0,0]
 
   packet =event.parsed
 
