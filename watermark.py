@@ -243,6 +243,7 @@ def _handle_PacketIn (event):
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
 
     if (len(flow_ipd_array) >= 40):
+      print flow_ipd_array
       if (check_distribution(flow_ipd_array) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
 
