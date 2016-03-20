@@ -140,7 +140,7 @@ def check_distribution(ipd_array):
 def find_mu_sigma(ipd_array):
   log.debug(" calculating mu and sigma for a normal distribution")
   mu_sigma_vals = [0,0]
-  mu_sigma_vals[0] = ipd_array.mean()
+  mu_sigma_vals[0] = numpy.mean(ipd_array)
   mu_sigma_vals[1] = numpy.std(ipd_array, axis = None)
   log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
   return mu_sigma_vals
