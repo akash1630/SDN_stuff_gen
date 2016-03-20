@@ -56,12 +56,12 @@ def create_watermark(host):
     mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
+    watermark_index = watermark_index + 1
     watermark_index_to_params_map[watermark_index] = mu_sigma_vals
     log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
     samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
     watermark_samples.append(samples)
-    watermark_index = watermark_index + 1
     watermarks_created_for_hosts[host] = watermark_index
     pprint.pprint(watermarks_created_for_hosts)
     return watermark_index
