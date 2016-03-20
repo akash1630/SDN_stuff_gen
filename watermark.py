@@ -229,7 +229,6 @@ def _handle_PacketIn (event):
       index = random.randint(0,1000)
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
-      #time.sleep(watermark_samples[0][index])
       #Timer(watermark_samples[0][index], delay_and_flood, event)
       core.callDelayed(watermark_samples[0][index], delay_and_flood, event)
       skip_add_to_dict_src = 1
@@ -262,7 +261,6 @@ def _handle_PacketIn (event):
       index = random.randint(0,1000)
       log.debug("index %i", index)
       log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
-      #time.sleep(watermark_samples[watermark][index])
       #Timer(watermark_samples[watermark][index], delay_and_flood , event)
       core.callDelayed(watermark_samples[watermark][index], delay_and_flood , event)
       skip_add_to_dict_src = 1
