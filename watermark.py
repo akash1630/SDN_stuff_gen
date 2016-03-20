@@ -191,6 +191,7 @@ def _handle_PacketIn (event):
   skip_add_to_dict_dest = 0
   skip_add_to_dict_src = 0
   mu_sigma_vals = [0,0]
+  is_correlated = 0
 
   packet =event.parsed
 
@@ -244,6 +245,9 @@ def _handle_PacketIn (event):
       print flow_ipd_array
       if (check_distribution(flow_ipd_array) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
+        is_correlated = find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals)
+        if is_correlated == 1:
+          log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
 
     if (dest_eth_addr in protected_resources):
       log.debug("tainted to protected communication")
