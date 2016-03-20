@@ -101,7 +101,10 @@ def delete_flow_entries(event, packet, host):
   #msg.priority = 65635
   msg.match.dl_src = host
   event.connection.send(msg)
-  log.debug("successfully sent delete flow message!!!!!!")
+  for conn in core.openflow.connections:
+    log.debug("********* sending a flow removal message to switch : %s ", dpidToStr(conn.dpid))
+    conn.send(msg)
+  log.debug("successfully sent delete flow messages!!!!!!")
 
 #function called after a delay to flood packets
 def delay_and_flood(event):
