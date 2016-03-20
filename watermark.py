@@ -29,6 +29,7 @@ watermark_index_to_params_map = {}
 for host in protected_resources:
   watermarks_created_for_hosts[host] = 0
 
+#function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
   log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
@@ -42,6 +43,7 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
   msg.actions.append(of.ofp_action_output(port = dst_port))
   event.connection.send(msg)
 
+#function to create a watermark for the passed host
 def create_watermark(host):
   global watermark_samples
   global watermark_index
@@ -50,8 +52,8 @@ def create_watermark(host):
     log.debug("host has watermark created already!")
     return watermarks_created_for_hosts.get(host)
   else:
-    mu = random.uniform(0.5, 2.0)
-    sigma = random.uniform(0.2, 0.9)
+    mu = random.uniform(0.3, 0.9)
+    sigma = random.uniform(0.1, 0.27)
     mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
@@ -65,6 +67,7 @@ def create_watermark(host):
     pprint.pprint(watermarks_created_for_hosts)
     return watermark_index
 
+#function to add a host to the tainted list
 def add_to_tainted_hosts(host):
   global tainted_hosts
   global watermarks_received_on_hosts
@@ -77,6 +80,7 @@ def add_to_tainted_hosts(host):
     log.debug("added %s to tainted_hosts list ", host)
   last_watermarked_flow_time[host] = time.time()
 
+#function to add a new watermark to a host that received the watermarked flow
 def add_to_watermarks_received_on_hosts(host, watermark):
   global watermarks_received_on_hosts
   if watermarks_received_on_hosts.has_key(host):
@@ -89,6 +93,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
     watermarks_received_on_hosts[host] = [watermark]
     pprint.pprint(watermarks_received_on_hosts)
 
+#function to delete flow entries for a tainted host
 def delete_flow_entries(event, packet, host):
   #if (host_address not in protected_resources)
   log.debug("deleting flow table entries for " + str(host))
@@ -98,10 +103,12 @@ def delete_flow_entries(event, packet, host):
   event.connection.send(msg)
   log.debug("successfully sent delete flow message!!!!!!")
 
+#function called after a delay to flood packets
 def delay_and_flood(event):
   log.debug("++++++++++ flooding after wait ++++++++++++")
   flood_packet(event, of.OFPP_ALL)
 
+#function tp prune the tailted hosts list
 def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
   marked_for_deletion = []
@@ -114,6 +121,7 @@ def prune_tainted_list():
     del tainted_hosts[host]
   log.debug(" ****** deleted %i hosts from the tainted list *********", len(marked_for_deletion))
 
+#function to update the interpacket-delay arrical times array for a given flow
 def update_ipd_arrays(src_eth_addr, dest_eth_addr):
   key = src_eth_addr + dest_eth_addr
   log.debug(" updating ipd array for : " + key)
@@ -127,6 +135,7 @@ def update_ipd_arrays(src_eth_addr, dest_eth_addr):
   else:
     flow_ipds[key] = [packet_delay]
 
+#function to check whether the passed array's elements are normaly distributed
 def check_distribution(ipd_array):
   log.debug(" Checking for a normal distribution")
   chi_stats = stats.normaltest(ipd_array)
@@ -137,6 +146,7 @@ def check_distribution(ipd_array):
   log.debug(" ------- sample Does Not follow a normal distribution ----------")
   return 0
 
+#function to find the mean and stddev for a normally distributed sample 
 def find_mu_sigma(ipd_array):
   log.debug(" calculating mu and sigma for a normal distribution")
   mu_sigma_vals = [0,0]
@@ -145,6 +155,7 @@ def find_mu_sigma(ipd_array):
   log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
   return mu_sigma_vals
 
+#function to check for a correlation
 def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals):
   log.debug("**** performing correlation tests for src: "+ src_eth_addr + " dest: " + dest_eth_addr)
   watermarks_to_check = []
