@@ -10,21 +10,20 @@ import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 
 log = core.getLogger()
-syn_counter = 0
-watermark_samples = []
+watermark_samples = []                                      #array to store arrays of watermark samples - induced ipd
 watermark_samples.append(np.random.normal(1, 0.5, 1000))
-mac_port_dict = {}
-protected_resources = ["00:00:00:00:00:03"]
-tainted_hosts = {}
-last_watermarked_flow_time = {}
-watermarks_received_on_hosts = {}
-watermark_index = 0
-watermarks_created_for_hosts = {}
-correlated_flows = {}
-suspected_hosts = []
-flow_last_packet_time = {}
-flow_ipds = {}
-watermark_index_to_params_map = {}
+mac_port_dict = {}                                          #mapping for destination mac addr and egres port
+protected_resources = ["00:00:00:00:00:03"]                 #list of protected resources
+tainted_hosts = {}                                          #dictionary: key - tainted hosts , value - time of taint 
+last_watermarked_flow_time = {}                             #dictionary: key - tainted hosts , value - time of receipt of last watermarked flow
+watermarks_received_on_hosts = {}                           #dictionary: key - tainted hosts , value - watermarks received on the host
+watermark_index = 0                                         #indexes to keep track of generated watermarks
+watermarks_created_for_hosts = {}                           #dictionary: key - tainted hosts , value - watermark indexes created for flows from host
+correlated_flows = {}                                       #record correlated flows
+suspected_hosts = []                                        #list of suspected hosts acting as pivots
+flow_last_packet_time = {}                                  #dictionary: key - suspected flows being monitored , value - time since last packet 
+flow_ipds = {}                                              #dictionary: key - suspected flows being monitored , value - ipd arrays
+watermark_index_to_params_map = {}                          #dictioanry: key - watermark indexes , value - mean and stddev for the dist
 
 for host in protected_resources:
   watermarks_created_for_hosts[host] = 0
@@ -182,7 +181,6 @@ def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals):
 
 def _handle_PacketIn (event):
 
-  global syn_counter
   global forward_rule_set
   global backward_rule_set
   global mac_port_dict
