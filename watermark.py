@@ -93,7 +93,7 @@ def add_to_watermarks_received_on_hosts(host, watermark):
     watermarks_received_on_hosts[host] = [watermark]
     pprint.pprint(watermarks_received_on_hosts)
 
-#function to delete flow entries for a tainted host
+#function to delete flow entries for a tainted host from all switches
 def delete_flow_entries(event, packet, host):
   #if (host_address not in protected_resources)
   log.debug("deleting flow table entries for " + str(host))
@@ -136,7 +136,7 @@ def update_ipd_arrays(src_eth_addr, dest_eth_addr):
   if flow_ipds.has_key(key):
     flow_ipds.get(key).append(packet_delay)
   else:
-    flow_ipds[key] = [packet_delay]
+    flow_ipds[key] = []
 
 #function to check whether the passed array's elements are normaly distributed
 def check_distribution(ipd_array):
@@ -170,7 +170,7 @@ def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals):
     return
   for watermark_index in watermarks_to_check:
     recorded_mu_sigma = watermark_index_to_params_map[watermark_index]
-    if (mu_sigma_vals[0] == recorded_mu_sigma[0]) and (mu_sigma_vals[1] == recorded_mu_sigma[1]):
+    if (0.9*recorded_mu_sigma[0] <= mu_sigma_vals[0]  <= 1.1*recorded_mu_sigma[0]) and (0.9*recorded_mu_sigma[1] <= mu_sigma_vals[1]  <= 1.1*recorded_mu_sigma[1]):
       log.debug(" ########### correlation found : %s -> %s  ###########", src_eth_addr, dest_eth_addr)
       del flow_ipds[key]
       del flow_last_packet_time[key]
@@ -242,7 +242,7 @@ def _handle_PacketIn (event):
     update_ipd_arrays(src_eth_addr, dest_eth_addr)
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
 
-    if (len(flow_ipd_array) >= 40):
+    if (len(flow_ipd_array) >= 60):
       print flow_ipd_array
       if (check_distribution(flow_ipd_array) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
