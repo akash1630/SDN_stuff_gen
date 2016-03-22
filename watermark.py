@@ -51,14 +51,14 @@ def create_watermark(host):
     log.debug("host has watermark created already!")
     return watermarks_created_for_hosts.get(host)
   else:
-    mu = random.uniform(0.3, 0.9)
-    sigma = random.uniform(0.1, 0.27)
+    mu = random.uniform(1, 1.02)
+    sigma = random.uniform(0, 0.002)
     mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
     watermark_index = watermark_index + 1
     watermark_index_to_params_map[watermark_index] = mu_sigma_vals
-    log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
+    log.debug("&&&&&&&& creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
     samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
     watermark_samples.append(samples)
@@ -105,6 +105,14 @@ def delete_flow_entries(event, packet, host):
     conn.send(msg)
   log.debug("successfully sent delete flow messages!!!!!!")
 
+def delete_flows_for_watermark_detection():
+  for host in tainted_hosts:
+    log.debug("****** deleting flows for tainted hosts to check for correlation ***" + str(host))
+    msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
+    msg.match.dl_src = host
+    for conn in core.openflow.connections:
+      conn.send(msg)
+
 #function called after a delay to flood packets
 def delay_and_flood(event):
   log.debug("++++++++++ flooding after wait ++++++++++++")
@@ -138,14 +146,17 @@ def update_ipd_arrays(src_eth_addr, dest_eth_addr):
     flow_ipds[key] = []
 
 #function to check whether the passed array's elements are normaly distributed
-def check_distribution(ipd_array):
+def check_distribution(ipd_array, src_eth_addr, dest_eth_addr):
   log.debug(" Checking for a normal distribution")
+  key  = src_eth_addr + dest_eth_addr
   chi_stats = stats.normaltest(ipd_array)
   p_val = chi_stats[1]
   if p_val > 0.1:
     log.debug("******** Sample follows a normal distribution *********")
     return 1
   log.debug(" ------- sample Does Not follow a normal distribution ----------")
+  del flow_ipds[key]
+  del flow_last_packet_time[key]
   return 0
 
 #function to find the mean and stddev for a normally distributed sample 
@@ -154,7 +165,7 @@ def find_mu_sigma(ipd_array):
   mu_sigma_vals = [0,0]
   mu_sigma_vals[0] = np.mean(ipd_array)
   mu_sigma_vals[1] = np.std(ipd_array, axis = None)
-  log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
+  log.debug(" calculated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
   return mu_sigma_vals
 
 #function to check for a correlation
@@ -213,9 +224,9 @@ def _handle_PacketIn (event):
 
   elif (tainted_hosts.has_key(dest_eth_addr)):
     log.debug("***traffic going to Tainted host ***")
-    log.debug("***FLow rule not added to switches. Send to controller***")
+    #log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict_dest = 1
+    #skip_add_to_dict_dest = 1
 
   if (src_eth_addr in protected_resources):
     if(dest_eth_addr in protected_resources):
@@ -239,33 +250,54 @@ def _handle_PacketIn (event):
   elif(tainted_hosts.has_key(src_eth_addr)):
     update_ipd_arrays(src_eth_addr, dest_eth_addr)
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
-
-    if (len(flow_ipd_array) >= 60):
+    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 60 == 0):
       print flow_ipd_array
-      if (check_distribution(flow_ipd_array) == 1):
+      if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
         is_correlated = find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals)
         if is_correlated == 1:
           log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
-
-    if (dest_eth_addr in protected_resources):
-      log.debug("tainted to protected communication")
-      skip_add_to_dict_dest = 0
+        else:
+          log.debug(" -------- No correlation. Adding flow entry to the flow tables")
+          skip_add_to_dict_src = 0
+          skip_add_to_dict_dest = 0
+          #mac_port_dict[packet.src] = event.port
+          #msg = of.ofp_flow_mod()
+          #msg.match = of.ofp_match.from_packet(packet, event.port)
+          #msg.priority = 1001
+          #msg.actions.append(of.ofp_action_output(port = event.port))
+          #msg.data = event.ofp
+          #event.connection.send(msg)
+      else:
+        log.debug(" -------- No normal distribution. Adding flow entry to the flow tables")
+        skip_add_to_dict_src = 0
+        skip_add_to_dict_dest = 0
+        #mac_port_dict[packet.src] = event.port
+        #msg = of.ofp_flow_mod()
+        #msg.match = of.ofp_match.from_packet(packet, event.port)
+        #msg.priority = 1001
+        #msg.actions.append(of.ofp_action_output(port = event.port))
+        #msg.data = event.ofp
+        #event.connection.send(msg)
     else:
-      log.debug("***** traffic from  a tainted host *********")
-      log.debug("***FLow rule not added to switches. Send to controller***")
+      if (dest_eth_addr in protected_resources):
+        log.debug("tainted to protected communication")
+        skip_add_to_dict_dest = 0
+      else:
+        log.debug("***** traffic from  a tainted host *********")
+        log.debug("***FLow rule not added to switches. Send to controller***")
 
-      add_to_tainted_hosts(dest_eth_addr)
-      watermark = create_watermark(src_eth_addr)
-      add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
-      index = random.randint(0,1000)
-      log.debug("index %i", index)
-      log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
-      #Timer(watermark_samples[watermark][index], delay_and_flood , event)
-      core.callDelayed(watermark_samples[watermark][index], delay_and_flood , event)
-      skip_add_to_dict_src = 1
-      #flood_packet(event, of.OFPP_ALL)
-      delete_flow_entries(event, packet, packet.dst)
+        #add_to_tainted_hosts(dest_eth_addr)
+        watermark = create_watermark(src_eth_addr)
+        add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
+        index = random.randint(0,999)
+        log.debug("index %i", index)
+        log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
+        #Timer(watermark_samples[watermark][index], delay_and_flood , event)
+        core.callDelayed(watermark_samples[watermark][index], delay_and_flood , event)
+        skip_add_to_dict_src = 1
+        #flood_packet(event, of.OFPP_ALL)
+        delete_flow_entries(event, packet, packet.dst)
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
@@ -292,6 +324,7 @@ def _handle_ConnectionUp (event):
 
 def launch ():
   Timer(120, prune_tainted_list, recurring = True)
+  Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
 
