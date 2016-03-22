@@ -105,6 +105,14 @@ def delete_flow_entries(event, packet, host):
     conn.send(msg)
   log.debug("successfully sent delete flow messages!!!!!!")
 
+def delete_flows_for_watermark_detection():
+  for host in tainted_hosts:
+    log.debug("****** deleting flows for tainted hosts to check for correlation ***" + str(host))
+    msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
+    msg.match.dl_src = host
+    for conn in core.openflow.connections:
+      conn.send(msg)
+
 #function called after a delay to flood packets
 def delay_and_flood(event):
   log.debug("++++++++++ flooding after wait ++++++++++++")
@@ -316,6 +324,7 @@ def _handle_ConnectionUp (event):
 
 def launch ():
   Timer(120, prune_tainted_list, recurring = True)
+  Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
 
