@@ -51,8 +51,8 @@ def create_watermark(host):
     log.debug("host has watermark created already!")
     return watermarks_created_for_hosts.get(host)
   else:
-    mu = random.uniform(1, 2)
-    sigma = random.uniform(0, 0.3)
+    mu = random.uniform(1, 1.02)
+    sigma = random.uniform(0, 0.002)
     mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
