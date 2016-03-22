@@ -51,14 +51,14 @@ def create_watermark(host):
     log.debug("host has watermark created already!")
     return watermarks_created_for_hosts.get(host)
   else:
-    mu = random.uniform(0.3, 0.9)
-    sigma = random.uniform(0.1, 0.27)
+    mu = random.uniform(1, 2)
+    sigma = random.uniform(0, 0.3)
     mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
     watermark_index = watermark_index + 1
     watermark_index_to_params_map[watermark_index] = mu_sigma_vals
-    log.debug("creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
+    log.debug("&&&&&&&& creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
     samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
     watermark_samples.append(samples)
@@ -146,6 +146,8 @@ def check_distribution(ipd_array):
     log.debug("******** Sample follows a normal distribution *********")
     return 1
   log.debug(" ------- sample Does Not follow a normal distribution ----------")
+  del flow_ipds[key]
+  del flow_last_packet_time[key]
   return 0
 
 #function to find the mean and stddev for a normally distributed sample 
@@ -154,7 +156,7 @@ def find_mu_sigma(ipd_array):
   mu_sigma_vals = [0,0]
   mu_sigma_vals[0] = np.mean(ipd_array)
   mu_sigma_vals[1] = np.std(ipd_array, axis = None)
-  log.debug(" calcluated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
+  log.debug(" calculated mean = %f  and std-dev = %f ", mu_sigma_vals[0], mu_sigma_vals[1])
   return mu_sigma_vals
 
 #function to check for a correlation
@@ -240,13 +242,21 @@ def _handle_PacketIn (event):
     update_ipd_arrays(src_eth_addr, dest_eth_addr)
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
 
-    if (len(flow_ipd_array) >= 60):
+    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 60 == 0):
       print flow_ipd_array
       if (check_distribution(flow_ipd_array) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
         is_correlated = find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals)
         if is_correlated == 1:
           log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
+        else:
+          log.debug(" -------- No correlation. Adding flow entry to the flow tables")
+          msg = of.ofp_flow_mod()
+          msg.match = of.ofp_match.from_packet(packet, event.port)
+          msg.priority = 1001
+          msg.actions.append(of.ofp_action_output(port = event.port))
+          msg.data = event.ofp
+          event.connection.send(msg)
 
     if (dest_eth_addr in protected_resources):
       log.debug("tainted to protected communication")
