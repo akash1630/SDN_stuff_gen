@@ -272,6 +272,7 @@ def _handle_PacketIn (event):
         else:
           log.debug(" -------- No correlation. Adding flow entry to the flow tables")
           skip_add_to_dict_src = 0
+          skip_add_to_dict_dest = 0
           #msg = of.ofp_flow_mod()
           #msg.match = of.ofp_match.from_packet(packet, event.port)
           #msg.priority = 1001
@@ -281,6 +282,7 @@ def _handle_PacketIn (event):
       else:
         log.debug(" -------- No normal distribution. Adding flow entry to the flow tables")
         skip_add_to_dict_src = 0
+        skip_add_to_dict_dest = 0
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
