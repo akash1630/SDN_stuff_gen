@@ -278,6 +278,9 @@ def _handle_PacketIn (event):
           #msg.actions.append(of.ofp_action_output(port = event.port))
           #msg.data = event.ofp
           #event.connection.send(msg)
+      else:
+        log.debug(" -------- No normal distribution. Adding flow entry to the flow tables")
+        skip_add_to_dict_src = 0
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
