@@ -138,8 +138,9 @@ def update_ipd_arrays(src_eth_addr, dest_eth_addr):
     flow_ipds[key] = []
 
 #function to check whether the passed array's elements are normaly distributed
-def check_distribution(ipd_array):
+def check_distribution(ipd_array, src_eth_addr, dest_eth_addr):
   log.debug(" Checking for a normal distribution")
+  key  = src_eth_addr + dest_eth_addr
   chi_stats = stats.normaltest(ipd_array)
   p_val = chi_stats[1]
   if p_val > 0.1:
@@ -242,22 +243,6 @@ def _handle_PacketIn (event):
     update_ipd_arrays(src_eth_addr, dest_eth_addr)
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
 
-    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 60 == 0):
-      print flow_ipd_array
-      if (check_distribution(flow_ipd_array) == 1):
-        mu_sigma_vals = find_mu_sigma(flow_ipd_array)
-        is_correlated = find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals)
-        if is_correlated == 1:
-          log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
-        else:
-          log.debug(" -------- No correlation. Adding flow entry to the flow tables")
-          msg = of.ofp_flow_mod()
-          msg.match = of.ofp_match.from_packet(packet, event.port)
-          msg.priority = 1001
-          msg.actions.append(of.ofp_action_output(port = event.port))
-          msg.data = event.ofp
-          event.connection.send(msg)
-
     if (dest_eth_addr in protected_resources):
       log.debug("tainted to protected communication")
       skip_add_to_dict_dest = 0
@@ -276,6 +261,23 @@ def _handle_PacketIn (event):
       skip_add_to_dict_src = 1
       #flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, packet.dst)
+
+    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 60 == 0):
+      print flow_ipd_array
+      if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
+        mu_sigma_vals = find_mu_sigma(flow_ipd_array)
+        is_correlated = find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals)
+        if is_correlated == 1:
+          log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
+        else:
+          log.debug(" -------- No correlation. Adding flow entry to the flow tables")
+          skip_add_to_dict_src = 0
+          #msg = of.ofp_flow_mod()
+          #msg.match = of.ofp_match.from_packet(packet, event.port)
+          #msg.priority = 1001
+          #msg.actions.append(of.ofp_action_output(port = event.port))
+          #msg.data = event.ofp
+          #event.connection.send(msg)
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
