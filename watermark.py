@@ -280,7 +280,7 @@ def _handle_PacketIn (event):
         add_to_tainted_hosts(dest_eth_addr)
         watermark = create_watermark(src_eth_addr)
         add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
-        index = random.randint(0,1000)
+        index = random.randint(0,999)
         log.debug("index %i", index)
         log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Tainted***")
         #Timer(watermark_samples[watermark][index], delay_and_flood , event)
