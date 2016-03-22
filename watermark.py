@@ -251,8 +251,9 @@ def _handle_PacketIn (event):
           log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
         else:
           log.debug(" -------- No correlation. Adding flow entry to the flow tables")
-          #skip_add_to_dict_src = 0
-          #skip_add_to_dict_dest = 0
+          skip_add_to_dict_src = 1
+          skip_add_to_dict_dest = 1
+          mac_port_dict[packet.src] = event.port
           msg = of.ofp_flow_mod()
           msg.match = of.ofp_match.from_packet(packet, event.port)
           msg.priority = 1001
@@ -261,8 +262,9 @@ def _handle_PacketIn (event):
           event.connection.send(msg)
       else:
         log.debug(" -------- No normal distribution. Adding flow entry to the flow tables")
-        #skip_add_to_dict_src = 0
-        #skip_add_to_dict_dest = 0
+        skip_add_to_dict_src = 1
+        skip_add_to_dict_dest = 1
+        mac_port_dict[packet.src] = event.port
         msg = of.ofp_flow_mod()
         msg.match = of.ofp_match.from_packet(packet, event.port)
         msg.priority = 1001
