@@ -224,9 +224,9 @@ def _handle_PacketIn (event):
 
   elif (tainted_hosts.has_key(dest_eth_addr)):
     log.debug("***traffic going to Tainted host ***")
-    log.debug("***FLow rule not added to switches. Send to controller***")
+    #log.debug("***FLow rule not added to switches. Send to controller***")
     #send_packet(event, packet)
-    skip_add_to_dict_dest = 1
+    #skip_add_to_dict_dest = 1
 
   if (src_eth_addr in protected_resources):
     if(dest_eth_addr in protected_resources):
@@ -287,7 +287,7 @@ def _handle_PacketIn (event):
         log.debug("***** traffic from  a tainted host *********")
         log.debug("***FLow rule not added to switches. Send to controller***")
 
-        add_to_tainted_hosts(dest_eth_addr)
+        #add_to_tainted_hosts(dest_eth_addr)
         watermark = create_watermark(src_eth_addr)
         add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
         index = random.randint(0,999)
