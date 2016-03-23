@@ -11,7 +11,7 @@ from pox.lib.util import dpidToStr
 
 log = core.getLogger()
 watermark_samples = []                                      #array to store arrays of watermark samples - induced ipd
-watermark_samples.append(np.random.normal(1, 0.5, 1000))
+watermark_samples.append(np.random.normal(.4, 0.1, 1000))
 mac_port_dict = {}                                          #mapping for destination mac addr and egres port
 protected_resources = ["00:00:00:00:00:03"]                 #list of protected resources
 tainted_hosts = {}                                          #dictionary: key - tainted hosts , value - time of taint 
@@ -51,8 +51,8 @@ def create_watermark(host):
     log.debug("host has watermark created already!")
     return watermarks_created_for_hosts.get(host)
   else:
-    mu = random.uniform(1, 1.02)
-    sigma = random.uniform(0, 0.002)
+    mu = random.uniform(0.5, 0.6)
+    sigma = random.uniform(0, 0.02)
     mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
