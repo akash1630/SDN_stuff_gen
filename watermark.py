@@ -247,10 +247,10 @@ def _handle_PacketIn (event):
       delete_flow_entries(event, packet, packet.dst)
        #send_packet(event, of.OFPP_ALL)
 
-  elif(tainted_hosts.has_key(src_eth_addr)):
+  elif(tainted_hosts.has_key(src_eth_addr) and (dest_eth_addr not in protected_resources)):
     update_ipd_arrays(src_eth_addr, dest_eth_addr)
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
-    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 60 == 0):
+    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 50 == 0):
       print flow_ipd_array
       if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
@@ -297,7 +297,7 @@ def _handle_PacketIn (event):
         core.callDelayed(watermark_samples[watermark][index], delay_and_flood , event)
         skip_add_to_dict_src = 1
         #flood_packet(event, of.OFPP_ALL)
-        delete_flow_entries(event, packet, packet.dst)
+        #delete_flow_entries(event, packet, packet.dst)
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
     log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
