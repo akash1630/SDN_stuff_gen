@@ -250,7 +250,7 @@ def _handle_PacketIn (event):
   elif(tainted_hosts.has_key(src_eth_addr) and (dest_eth_addr not in protected_resources)):
     update_ipd_arrays(src_eth_addr, dest_eth_addr)
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
-    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 50 == 0):
+    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 30 == 0):
       print flow_ipd_array
       if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
