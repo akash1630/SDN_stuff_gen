@@ -101,9 +101,9 @@ def delete_flow_entries(event, packet, host):
   msg.match.dl_src = host
   event.connection.send(msg)
   for conn in core.openflow.connections:
-    log.debug("********* sending a flow removal message to switch : %s ", dpidToStr(conn.dpid))
+    #log.debug("********* sending a flow removal message to switch : %s ", dpidToStr(conn.dpid))
     conn.send(msg)
-  log.debug("successfully sent delete flow messages!!!!!!")
+  #log.debug("successfully sent delete flow messages!!!!!!")
 
 def delete_flows_for_watermark_detection():
   for host in tainted_hosts:
@@ -215,7 +215,7 @@ def _handle_PacketIn (event):
   if ipv4_pack:
     log.debug("IP packet in transit from  "+str(ipv4_pack.srcip)+"<->"+str(ipv4_pack.dstip))
 
-  log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
+  #log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
   if (dest_eth_addr in protected_resources):
     log.debug("***traffic going to protected resource***")
     #log.debug("***FLow rule not added to switches. Send to controller***")
@@ -234,7 +234,7 @@ def _handle_PacketIn (event):
       skip_add_to_dict_dest = 0
     else:
       log.debug("*** traffic from protected resource***")
-      log.debug("***FLow rule not added to switches. Send to controller***")
+      #log.debug("***FLow rule not added to switches. Send to controller***")
       add_to_tainted_hosts(dest_eth_addr)
       add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
       index = random.randint(0,1000)
@@ -285,7 +285,7 @@ def _handle_PacketIn (event):
         skip_add_to_dict_dest = 0
       else:
         log.debug("***** traffic from  a tainted host *********")
-        log.debug("***FLow rule not added to switches. Send to controller***")
+        #log.debug("***FLow rule not added to switches. Send to controller***")
 
         #add_to_tainted_hosts(dest_eth_addr)
         watermark = create_watermark(src_eth_addr)
