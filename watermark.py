@@ -250,6 +250,7 @@ def _handle_PacketIn (event):
       log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
       #Timer(watermark_samples[0][index], delay_and_flood, event)
       core.callDelayed(absolute_delay, delay_and_flood, event)
+      flow_last_packet_sent_time[src_eth_addr + dest_eth_addr] = absolute_delay
       skip_add_to_dict_src = 1
       #flood_packet(event, of.OFPP_ALL)
       delete_flow_entries(event, packet, packet.dst)
@@ -310,6 +311,7 @@ def _handle_PacketIn (event):
         log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
         #Timer(watermark_samples[0][index], delay_and_flood, event)
         core.callDelayed(absolute_delay, delay_and_flood, event)
+        flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = absolute_delay
         skip_add_to_dict_src = 1
         #flood_packet(event, of.OFPP_ALL)
         #delete_flow_entries(event, packet, packet.dst)
