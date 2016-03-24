@@ -234,11 +234,12 @@ def _handle_PacketIn (event):
       log.debug("protected to protected communication")
       skip_add_to_dict_dest = 0
     else:
-      log.debug("*** traffic from protected resource***")
+      #log.debug("*** traffic from protected resource***")
       #log.debug("***FLow rule not added to switches. Send to controller***")
       add_to_tainted_hosts(dest_eth_addr)
       #add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
       watermark = create_watermark(src_eth_addr)
+      log.debug("*** traffic from protected resource and watermark creation result : %i", watermark)
       add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
       index = random.randint(0,1000)
       log.debug("index %i", index)
@@ -296,11 +297,12 @@ def _handle_PacketIn (event):
         log.debug("tainted to protected communication")
         skip_add_to_dict_dest = 0
       else:
-        log.debug("***** traffic from  a tainted host *********")
+        #log.debug("***** traffic from  a tainted host *********")
         #log.debug("***FLow rule not added to switches. Send to controller***")
 
         #add_to_tainted_hosts(dest_eth_addr)
         watermark = create_watermark(src_eth_addr)
+        log.debug("*** traffic from tainted host and watermark creation result : %i", watermark)
         add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
         index = random.randint(0,1000)
         log.debug("index %i", index)
