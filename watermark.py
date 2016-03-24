@@ -11,7 +11,7 @@ from pox.lib.util import dpidToStr
 
 log = core.getLogger()
 watermark_samples = []                                      #array to store arrays of watermark samples - induced ipd
-watermark_samples.append(np.random.normal(.1, 0.03, 1000))
+#watermark_samples.append(np.random.normal(.1, 0.03, 1000))
 mac_port_dict = {}                                          #mapping for destination mac addr and egres port
 protected_resources = ["00:00:00:00:00:03"]                 #list of protected resources
 tainted_hosts = {}                                          #dictionary: key - tainted hosts , value - time of taint 
@@ -52,14 +52,14 @@ def create_watermark(host):
     log.debug("host has watermark created already!")
     return watermarks_created_for_hosts.get(host)
   else:
-    mu = random.uniform(0.2, 0.4)
-    sigma = random.uniform(0, 0.1)
+    mu = random.uniform(0.08, 0.2)
+    sigma = random.uniform(0, 0.05)
     mu_sigma_vals = [0,0]
     mu_sigma_vals[0] = mu
     mu_sigma_vals[1] = sigma
     watermark_index = watermark_index + 1
     watermark_index_to_params_map[watermark_index] = mu_sigma_vals
-    log.debug("&&&&&&&& creating watermark array with params : "+ str(mu) + "    "+ str(sigma))
+    log.debug("&&&&&&&& creating watermark array with params : "+ str(mu) + "    "+ str(sigma) + " for host : " + host)
     samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
     watermark_samples.append(samples)
@@ -237,17 +237,19 @@ def _handle_PacketIn (event):
       log.debug("*** traffic from protected resource***")
       #log.debug("***FLow rule not added to switches. Send to controller***")
       add_to_tainted_hosts(dest_eth_addr)
-      add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
+      #add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
+      watermark = create_watermark(src_eth_addr)
+      add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
       index = random.randint(0,1000)
       log.debug("index %i", index)
-      induced_delay = watermark_samples[0][index]
+      induced_delay = watermark_samples[watermark][index]
       absolute_delay = 0
       if flow_last_packet_sent_time.has_key(src_eth_addr+dest_eth_addr):
         absolute_delay = flow_last_packet_sent_time[src_eth_addr+dest_eth_addr]
       else:
         flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
       absolute_delay = absolute_delay + induced_delay
-      log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
+      log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
       log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
       #Timer(watermark_samples[0][index], delay_and_flood, event)
       core.callDelayed(absolute_delay, delay_and_flood, event)
@@ -260,7 +262,7 @@ def _handle_PacketIn (event):
   elif(tainted_hosts.has_key(src_eth_addr) and (dest_eth_addr not in protected_resources)):
     update_ipd_arrays(src_eth_addr, dest_eth_addr)
     flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
-    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 30 == 0):
+    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 50 == 0):
       print flow_ipd_array
       if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
         mu_sigma_vals = find_mu_sigma(flow_ipd_array)
@@ -302,7 +304,7 @@ def _handle_PacketIn (event):
         add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
         index = random.randint(0,1000)
         log.debug("index %i", index)
-        induced_delay = watermark_samples[0][index]
+        induced_delay = watermark_samples[watermark][index]
         absolute_delay = 0
         if flow_last_packet_sent_time.has_key(src_eth_addr+dest_eth_addr):
           absolute_delay = flow_last_packet_sent_time[src_eth_addr+dest_eth_addr]
@@ -310,7 +312,7 @@ def _handle_PacketIn (event):
           flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
         absolute_delay = absolute_delay + induced_delay
         #log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
-        log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
+        log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
         log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
         #Timer(watermark_samples[0][index], delay_and_flood, event)
         core.callDelayed(absolute_delay, delay_and_flood, event)
