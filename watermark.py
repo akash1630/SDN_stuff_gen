@@ -247,7 +247,8 @@ def _handle_PacketIn (event):
       else:
         flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
       absolute_delay = absolute_delay + induced_delay
-      log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
+      log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
+      log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
       #Timer(watermark_samples[0][index], delay_and_flood, event)
       core.callDelayed(absolute_delay, delay_and_flood, event)
       flow_last_packet_sent_time[src_eth_addr + dest_eth_addr] = absolute_delay
@@ -308,7 +309,9 @@ def _handle_PacketIn (event):
         else:
           flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
         absolute_delay = absolute_delay + induced_delay
-        log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
+        #log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
+        log.debug("****inserting  "+str(watermark_samples[0][index])+" seconds delay here - src Protected***")
+        log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
         #Timer(watermark_samples[0][index], delay_and_flood, event)
         core.callDelayed(absolute_delay, delay_and_flood, event)
         flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = absolute_delay
