@@ -26,8 +26,8 @@ flow_ipds = {}                                              #dictionary: key - s
 watermark_index_to_params_map = {}                          #dictioanry: key - watermark indexes , value - mean and stddev for the dist
 flow_last_packet_sent_time = {}
 
-for host in protected_resources:
-  watermarks_created_for_hosts[host] = 0
+#for host in protected_resources:
+  #watermarks_created_for_hosts[host] = 0
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
@@ -59,7 +59,7 @@ def create_watermark(host):
     mu_sigma_vals[1] = sigma
     watermark_index = watermark_index + 1
     watermark_index_to_params_map[watermark_index] = mu_sigma_vals
-    log.debug("&&&&&&&& creating watermark array with params : "+ str(mu) + "    "+ str(sigma) + " for host : " + host)
+    log.debug("&&&&&&&& creating watermark: "+ str(mu) + "  "+ str(sigma) + " for host : " + host + "  with watermark index : " str(watermark_index))
     samples = np.random.normal(mu, sigma, 1000)
     #watermark_samples = np.vstack((watermark_samples, samples))
     watermark_samples.append(samples)
