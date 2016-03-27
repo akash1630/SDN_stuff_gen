@@ -211,6 +211,7 @@ def _handle_PacketIn (event):
   skip_add_to_dict_src = 0
   mu_sigma_vals = [0,0]
   is_correlated = 0
+  is_tcp_ack = 0
 
   packet =event.parsed
 
@@ -220,101 +221,48 @@ def _handle_PacketIn (event):
   src_eth_addr = str(packet.src)
   key = src_eth_addr + dest_eth_addr
 
-  tcp = packet.find("tcp")
-  if tcp:
-    #log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
-    if tcp.ACK:
-      log.debug("!!!!!!   TCP ack packet     !!!!!!")
-      flood_packet(event, of.OFPP_ALL)
-      return
-
-
   ipv4_pack = packet.find("ipv4")
   if ipv4_pack:
     log.debug("IP packet in transit from  "+str(ipv4_pack.srcip)+"<->"+str(ipv4_pack.dstip))
 
+  tcp = packet.find("tcp")
+  if tcp:
+    #log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
+    if tcp.ACK:
+      log.debug("!!!!!!   TCP ack packet  %s   !!!!!!", key)
+      flood_packet(event, of.OFPP_ALL)
+      is_tcp_ack = 1
+
+
   #log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
-  if (dest_eth_addr in protected_resources):
-    log.debug("***traffic going to protected resource***")
-    #log.debug("***FLow rule not added to switches. Send to controller***")
-    #send_packet(event, packet)
-    #skip_add_to_dict_dest = 1
-
-  elif (tainted_hosts.has_key(dest_eth_addr)):
-    log.debug("***traffic going to Tainted host ***")
-    #log.debug("***FLow rule not added to switches. Send to controller***")
-    #send_packet(event, packet)
-    #skip_add_to_dict_dest = 1
-
-  if (src_eth_addr in protected_resources):
-    if(dest_eth_addr in protected_resources):
-      log.debug("protected to protected communication")
-      skip_add_to_dict_dest = 0
-    else:
-      #log.debug("*** traffic from protected resource***")
+  if is_tcp_ack == 0:
+    if (dest_eth_addr in protected_resources):
+      log.debug("***traffic going to protected resource***")
       #log.debug("***FLow rule not added to switches. Send to controller***")
-      add_to_tainted_hosts(dest_eth_addr)
-      #add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
-      if flow_packets_queues.has_key(key):
-        (flow_packets_queues.get(key)).insert(0,event)
-      else:
-        flow_packets_queues[key] = [event]
-      watermark = create_watermark(src_eth_addr)
-      log.debug("*** traffic from protected resource and watermark creation result : %i", watermark)
-      add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
-      index = random.randint(0,1000)
-      log.debug("index %i", index)
-      induced_delay = watermark_samples[watermark][index]
-      absolute_delay = 0
-      if flow_last_packet_sent_time.has_key(src_eth_addr+dest_eth_addr):
-        absolute_delay = flow_last_packet_sent_time[src_eth_addr+dest_eth_addr]
-      else:
-        flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
-      absolute_delay = absolute_delay + induced_delay
-      log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
-      #log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
-      #Timer(watermark_samples[0][index], delay_and_flood, event)
-      #core.callDelayed(absolute_delay, delay_and_flood, event)
-      core.callDelayed(induced_delay, release_packets, key)
-      flow_last_packet_sent_time[src_eth_addr + dest_eth_addr] = absolute_delay
-      skip_add_to_dict_src = 1
-      #flood_packet(event, of.OFPP_ALL)
-      delete_flow_entries(event, packet, packet.dst)
-       #send_packet(event, of.OFPP_ALL)
+      #send_packet(event, packet)
+      #skip_add_to_dict_dest = 1
 
-  elif(tainted_hosts.has_key(src_eth_addr) and (dest_eth_addr not in protected_resources)):
-    update_ipd_arrays(src_eth_addr, dest_eth_addr)
-    flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
-    if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 50 == 0):
-      print flow_ipd_array
-      if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
-        mu_sigma_vals = find_mu_sigma(flow_ipd_array)
-        is_correlated = find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals)
-        if is_correlated == 1:
-          log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
-        else:
-          log.debug(" -------- No correlation. Adding flow entry to the flow tables")
-          skip_add_to_dict_src = 0
-          skip_add_to_dict_dest = 0
-      else:
-        log.debug(" -------- No normal distribution. Adding flow entry to the flow tables")
-        skip_add_to_dict_src = 0
-        skip_add_to_dict_dest = 0
-    else:
-      if (dest_eth_addr in protected_resources):
-        log.debug("tainted to protected communication")
+    elif (tainted_hosts.has_key(dest_eth_addr)):
+      log.debug("***traffic going to Tainted host ***")
+      #log.debug("***FLow rule not added to switches. Send to controller***")
+      #send_packet(event, packet)
+      #skip_add_to_dict_dest = 1
+
+    if (src_eth_addr in protected_resources):
+      if(dest_eth_addr in protected_resources):
+        log.debug("protected to protected communication")
         skip_add_to_dict_dest = 0
       else:
-        #log.debug("***** traffic from  a tainted host *********")
+        #log.debug("*** traffic from protected resource***")
         #log.debug("***FLow rule not added to switches. Send to controller***")
-
-        #add_to_tainted_hosts(dest_eth_addr)
+        add_to_tainted_hosts(dest_eth_addr)
+        #add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
         if flow_packets_queues.has_key(key):
           (flow_packets_queues.get(key)).insert(0,event)
         else:
           flow_packets_queues[key] = [event]
         watermark = create_watermark(src_eth_addr)
-        log.debug("*** traffic from tainted host and watermark creation result : %i", watermark)
+        log.debug("*** traffic from protected resource and watermark creation result : %i", watermark)
         add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
         index = random.randint(0,1000)
         log.debug("index %i", index)
@@ -325,35 +273,89 @@ def _handle_PacketIn (event):
         else:
           flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
         absolute_delay = absolute_delay + induced_delay
-        #log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
         log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
         #log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
         #Timer(watermark_samples[0][index], delay_and_flood, event)
         #core.callDelayed(absolute_delay, delay_and_flood, event)
         core.callDelayed(induced_delay, release_packets, key)
-        flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = absolute_delay
+        flow_last_packet_sent_time[src_eth_addr + dest_eth_addr] = absolute_delay
         skip_add_to_dict_src = 1
         #flood_packet(event, of.OFPP_ALL)
-        #delete_flow_entries(event, packet, packet.dst)
+        delete_flow_entries(event, packet, packet.dst)
+         #send_packet(event, of.OFPP_ALL)
 
-  if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
-    log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
-    mac_port_dict[packet.src] = event.port
-    if packet.dst not in mac_port_dict:
-      log.debug("flooding to all ports as no entry in dictionary")
+    elif(tainted_hosts.has_key(src_eth_addr) and (dest_eth_addr not in protected_resources)):
+      update_ipd_arrays(src_eth_addr, dest_eth_addr)
+      flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
+      if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 50 == 0):
+        print flow_ipd_array
+        if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
+          mu_sigma_vals = find_mu_sigma(flow_ipd_array)
+          is_correlated = find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals)
+          if is_correlated == 1:
+            log.debug(" #######@@@@@@@@ correlated flows - Take appropriate actions @@@@@@@@########")
+          else:
+            log.debug(" -------- No correlation. Adding flow entry to the flow tables")
+            skip_add_to_dict_src = 0
+            skip_add_to_dict_dest = 0
+        else:
+          log.debug(" -------- No normal distribution. Adding flow entry to the flow tables")
+          skip_add_to_dict_src = 0
+          skip_add_to_dict_dest = 0
+      else:
+        if (dest_eth_addr in protected_resources):
+          log.debug("tainted to protected communication")
+          skip_add_to_dict_dest = 0
+        else:
+          #log.debug("***** traffic from  a tainted host *********")
+          #log.debug("***FLow rule not added to switches. Send to controller***")
+
+          #add_to_tainted_hosts(dest_eth_addr)
+          if flow_packets_queues.has_key(key):
+            (flow_packets_queues.get(key)).insert(0,event)
+          else:
+            flow_packets_queues[key] = [event]
+          watermark = create_watermark(src_eth_addr)
+          log.debug("*** traffic from tainted host and watermark creation result : %i", watermark)
+          add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
+          index = random.randint(0,1000)
+          log.debug("index %i", index)
+          induced_delay = watermark_samples[watermark][index]
+          absolute_delay = 0
+          if flow_last_packet_sent_time.has_key(src_eth_addr+dest_eth_addr):
+            absolute_delay = flow_last_packet_sent_time[src_eth_addr+dest_eth_addr]
+          else:
+            flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
+          absolute_delay = absolute_delay + induced_delay
+          #log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
+          log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
+          #log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
+          #Timer(watermark_samples[0][index], delay_and_flood, event)
+          #core.callDelayed(absolute_delay, delay_and_flood, event)
+          core.callDelayed(induced_delay, release_packets, key)
+          flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = absolute_delay
+          skip_add_to_dict_src = 1
+          #flood_packet(event, of.OFPP_ALL)
+          #delete_flow_entries(event, packet, packet.dst)
+
+    if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
+      log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+      mac_port_dict[packet.src] = event.port
+      if packet.dst not in mac_port_dict:
+        log.debug("flooding to all ports as no entry in dictionary")
+        flood_packet(event, of.OFPP_ALL)
+      else:
+        port = mac_port_dict[packet.dst]
+        log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
+        msg = of.ofp_flow_mod()
+        msg.match = of.ofp_match.from_packet(packet, event.port)
+        msg.priority = 1009
+        msg.actions.append(of.ofp_action_output(port = port))
+        msg.data = event.ofp
+        event.connection.send(msg)
+    elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
+      log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
       flood_packet(event, of.OFPP_ALL)
-    else:
-      port = mac_port_dict[packet.dst]
-      log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
-      msg = of.ofp_flow_mod()
-      msg.match = of.ofp_match.from_packet(packet, event.port)
-      msg.priority = 1009
-      msg.actions.append(of.ofp_action_output(port = port))
-      msg.data = event.ofp
-      event.connection.send(msg)
-  elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
-    log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
-    flood_packet(event, of.OFPP_ALL)
 
 
 def _handle_ConnectionUp (event):
