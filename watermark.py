@@ -256,7 +256,7 @@ def _handle_PacketIn (event):
       add_to_tainted_hosts(dest_eth_addr)
       #add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
       if flow_packets_queues.has_key(key):
-        flow_packets_queues.get(key).append(event)
+        (flow_packets_queues.get(key)).insert(0,event)
       else:
         flow_packets_queues[key] = [event]
       watermark = create_watermark(src_eth_addr)
@@ -324,7 +324,7 @@ def _handle_PacketIn (event):
 
         #add_to_tainted_hosts(dest_eth_addr)
         if flow_packets_queues.has_key(key):
-          flow_packets_queues.get(key).append(event)
+          (flow_packets_queues.get(key)).insert(0,event)
         else:
           flow_packets_queues[key] = [event]
         watermark = create_watermark(src_eth_addr)
