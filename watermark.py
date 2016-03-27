@@ -212,6 +212,15 @@ def _handle_PacketIn (event):
   dest_eth_addr = str(packet.dst)
   src_eth_addr = str(packet.src)
 
+  tcp = packet.find("tcp")
+  if tcp:
+    log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
+    if tcp.ACK:
+      log.debug("!!!!!!   TCP ack packet     !!!!!!")
+      flood_packet(event, of.OFPP_ALL)
+      return
+
+
   ipv4_pack = packet.find("ipv4")
   if ipv4_pack:
     log.debug("IP packet in transit from  "+str(ipv4_pack.srcip)+"<->"+str(ipv4_pack.dstip))
