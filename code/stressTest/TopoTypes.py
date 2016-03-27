@@ -16,11 +16,11 @@ class StarType(Topo):
 
  	s1 = self.addSwitch('s1', cls=OVSKernelSwitch)
 
-    	h4 = self.addHost('h4', cls=Host, ip='10.0.0.4', defaultRoute=None)
-    	h3 = self.addHost('h3', cls=Host, ip='10.0.0.3', defaultRoute=None)
-    	h2 = self.addHost('h2', cls=Host, ip='10.0.0.2', defaultRoute=None)
-    	h1 = self.addHost('h1', cls=Host, ip='10.0.0.1', defaultRoute=None)
-    	h5 = self.addHost('h5', cls=Host, ip='10.0.0.5', defaultRoute=None)
+    	h4 = self.addHost('h4', cls=Host, ip='10.0.0.4', mac='00:00:00:00:00:04', defaultRoute=None)
+    	h3 = self.addHost('h3', cls=Host, ip='10.0.0.3', mac='00:00:00:00:00:03', defaultRoute=None)
+    	h2 = self.addHost('h2', cls=Host, ip='10.0.0.2', mac='00:00:00:00:00:02', defaultRoute=None)
+    	h1 = self.addHost('h1', cls=Host, ip='10.0.0.1', mac='00:00:00:00:00:01', defaultRoute=None)
+    	h5 = self.addHost('h5', cls=Host, ip='10.0.0.5', mac='00:00:00:00:00:05', defaultRoute=None)
 
 	self.addLink(h1, s1)
     	self.addLink(s1, h2)
