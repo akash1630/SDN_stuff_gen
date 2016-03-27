@@ -221,12 +221,12 @@ def _handle_PacketIn (event):
   key = src_eth_addr + dest_eth_addr
 
   tcp = packet.find("tcp")
-  if tcp:
-    log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
-    if tcp.ACK:
-      log.debug("!!!!!!   TCP ack packet     !!!!!!")
-      flood_packet(event, of.OFPP_ALL)
-      return
+  #if tcp:
+  #  log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
+  #  if tcp.ACK:
+  #    log.debug("!!!!!!   TCP ack packet     !!!!!!")
+  #    flood_packet(event, of.OFPP_ALL)
+  #    return
 
 
   ipv4_pack = packet.find("ipv4")
