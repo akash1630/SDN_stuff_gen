@@ -182,7 +182,7 @@ def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals):
     return
   for watermark_index in watermarks_to_check:
     recorded_mu_sigma = watermark_index_to_params_map[watermark_index]
-    if (0.9*recorded_mu_sigma[0] <= mu_sigma_vals[0]  <= 1.1*recorded_mu_sigma[0]) and (0.9*recorded_mu_sigma[1] <= mu_sigma_vals[1]  <= 1.1*recorded_mu_sigma[1]):
+    if (0.9*recorded_mu_sigma[0] <= mu_sigma_vals[0]  <= 1.1*recorded_mu_sigma[0]) and (mu_sigma_vals[1]  <= 1.5*recorded_mu_sigma[1]):
       log.debug(" ########### correlation found : %s -> %s  ###########", src_eth_addr, dest_eth_addr)
       del flow_ipds[key]
       del flow_last_packet_received_time[key]
@@ -287,7 +287,7 @@ def _handle_PacketIn (event):
     elif(tainted_hosts.has_key(src_eth_addr) and (dest_eth_addr not in protected_resources)):
       update_ipd_arrays(src_eth_addr, dest_eth_addr)
       flow_ipd_array = flow_ipds.get(src_eth_addr+dest_eth_addr)
-      if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 50 == 0):
+      if (len(flow_ipd_array) > 0 and (len(flow_ipd_array)) % 21 == 0):
         print flow_ipd_array
         if (check_distribution(flow_ipd_array, src_eth_addr, dest_eth_addr) == 1):
           mu_sigma_vals = find_mu_sigma(flow_ipd_array)
