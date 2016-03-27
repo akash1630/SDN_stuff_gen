@@ -25,6 +25,7 @@ flow_last_packet_received_time = {}                                  #dictionary
 flow_ipds = {}                                              #dictionary: key - suspected flows being monitored , value - ipd arrays
 watermark_index_to_params_map = {}                          #dictioanry: key - watermark indexes , value - mean and stddev for the dist
 flow_last_packet_sent_time = {}
+flow_packets_queues = {}
 
 #for host in protected_resources:
   #watermarks_created_for_hosts[host] = 0
@@ -191,6 +192,11 @@ def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals):
   del flow_last_packet_received_time[key]
   return 0
 
+def release_packets(key):
+  log.debug("releasing packet")
+  if flow_packets_queues.has_key(key):
+    flood_packet(event, of.OFPP_ALL)
+
 def _handle_PacketIn (event):
 
   global forward_rule_set
@@ -211,6 +217,7 @@ def _handle_PacketIn (event):
 
   dest_eth_addr = str(packet.dst)
   src_eth_addr = str(packet.src)
+  key = src_eth_addr + dest_eth_addr
 
   tcp = packet.find("tcp")
   if tcp:
@@ -247,6 +254,10 @@ def _handle_PacketIn (event):
       #log.debug("***FLow rule not added to switches. Send to controller***")
       add_to_tainted_hosts(dest_eth_addr)
       #add_to_watermarks_received_on_hosts(dest_eth_addr, 0)
+      if flow_packets_queues.has_key(key):
+        flow_packets_queues.get(key).append(event)
+      else:
+        flow_packets_queues[key] = [event]
       watermark = create_watermark(src_eth_addr)
       log.debug("*** traffic from protected resource and watermark creation result : %i", watermark)
       add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
@@ -260,9 +271,10 @@ def _handle_PacketIn (event):
         flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = induced_delay
       absolute_delay = absolute_delay + induced_delay
       log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
-      log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
+      #log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
       #Timer(watermark_samples[0][index], delay_and_flood, event)
-      core.callDelayed(absolute_delay, delay_and_flood, event)
+      #core.callDelayed(absolute_delay, delay_and_flood, event)
+      core.callDelayed(induced_delay, release_packets, key)
       flow_last_packet_sent_time[src_eth_addr + dest_eth_addr] = absolute_delay
       skip_add_to_dict_src = 1
       #flood_packet(event, of.OFPP_ALL)
@@ -310,6 +322,10 @@ def _handle_PacketIn (event):
         #log.debug("***FLow rule not added to switches. Send to controller***")
 
         #add_to_tainted_hosts(dest_eth_addr)
+        if flow_packets_queues.has_key(key):
+          flow_packets_queues.get(key).append(event)
+        else:
+          flow_packets_queues[key] = [event]
         watermark = create_watermark(src_eth_addr)
         log.debug("*** traffic from tainted host and watermark creation result : %i", watermark)
         add_to_watermarks_received_on_hosts(dest_eth_addr, watermark)
@@ -324,9 +340,10 @@ def _handle_PacketIn (event):
         absolute_delay = absolute_delay + induced_delay
         #log.debug("****inserting  "+str(absolute_delay)+" seconds delay here - src Protected***")
         log.debug("****inserting  "+str(watermark_samples[watermark][index])+" seconds delay here - src Protected***")
-        log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
+        #log.debug("***** absolute packet release time after delay addition since t0 : " + str(absolute_delay))
         #Timer(watermark_samples[0][index], delay_and_flood, event)
-        core.callDelayed(absolute_delay, delay_and_flood, event)
+        #core.callDelayed(absolute_delay, delay_and_flood, event)
+        core.callDelayed(induced_delay, release_packets, key)
         flow_last_packet_sent_time[src_eth_addr+dest_eth_addr] = absolute_delay
         skip_add_to_dict_src = 1
         #flood_packet(event, of.OFPP_ALL)
