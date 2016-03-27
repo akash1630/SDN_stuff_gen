@@ -195,6 +195,7 @@ def find_correlation(src_eth_addr, dest_eth_addr, mu_sigma_vals):
 def release_packets(key):
   log.debug("releasing packet")
   if flow_packets_queues.has_key(key):
+    event = (flow_packets_queues.get(key)).pop()
     flood_packet(event, of.OFPP_ALL)
 
 def _handle_PacketIn (event):
