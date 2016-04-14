@@ -80,7 +80,7 @@ def prune_tainted_list():
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
-        #marked_for_deletion.append(key)
+        marked_for_deletion.append(key)
 
   for host in marked_for_deletion:
     del tainted_hosts[host]
