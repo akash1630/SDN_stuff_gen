@@ -154,19 +154,12 @@ def _handle_PacketIn (event):
         log.debug("protected to protected communication")
         skip_add_to_dict_dest = 0
       else:
-        #log.debug("*** traffic from protected resource***")
-        #log.debug("***FLow rule not added to switches. Send to controller***")
         add_to_tainted_hosts(dest_eth_addr)
-        #skip_add_to_dict_src = 1
-        #flood_packet(event, of.OFPP_ALL)
         delete_flow_entries(event, packet, packet.dst)
-         #send_packet(event, of.OFPP_ALL)
 
     elif(tainted_hosts.has_key(src_eth_addr) and (dest_eth_addr not in protected_resources)):
       add_to_tainted_hosts(dest_eth_addr)
-      #skip_add_to_dict_src = 1
-      #flood_packet(event, of.OFPP_ALL)
-      #delete_flow_entries(event, packet, packet.dst)
+      delete_flow_entries(event, packet, packet.dst)
 
     if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
       log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
