@@ -11,8 +11,6 @@ from pox.lib.util import dpidToStr
 #import taint_db_impl
 
 log = core.getLogger()
-watermark_samples = []                                      #array to store arrays of watermark samples - induced ipd
-#watermark_samples.append(np.random.normal(.1, 0.03, 1000))
 mac_port_dict = {}                                          #mapping for destination mac addr and egres port
 protected_resources = ["00:00:00:00:00:03"]                 #list of protected resources
 tainted_hosts = {}                                          #dictionary: key - tainted hosts , value - time of taint 
@@ -41,13 +39,12 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
 #function to add a host to the tainted list
 def add_to_tainted_hosts(host):
   global tainted_hosts
-  global watermarks_received_on_hosts
   if (tainted_hosts.has_key(host)) or (host in protected_resources):
-    log.debug("host already present in tainted list")
+    log.debug("host already present in tainted list. Refreshing time")
+    tainted_hosts[host] = time.time()
   else:
     tainted_hosts[host] = time.time()
     log.debug("added %s to tainted_hosts list ", host)
-  last_watermarked_flow_time[host] = time.time()
   pprint.pprint(tainted_hosts)
 
 #function to delete flow entries for a tainted host from all switches
@@ -82,8 +79,8 @@ def prune_tainted_list():
   marked_for_deletion = []
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
-      if time.time() - last_watermarked_flow_time[key] >= 121:
-        marked_for_deletion.append(key)
+      #if time.time() - last_watermarked_flow_time[key] >= 121:
+        #marked_for_deletion.append(key)
 
   for host in marked_for_deletion:
     del tainted_hosts[host]
@@ -115,10 +112,8 @@ def _handle_PacketIn (event):
   global forward_rule_set
   global backward_rule_set
   global mac_port_dict
-  global watermark_samples
   global protected_resources
   global tainted_hosts
-  global watermark_count
   skip_add_to_dict_dest = 0
   skip_add_to_dict_src = 0
   mu_sigma_vals = [0,0]
@@ -198,7 +193,7 @@ def _handle_ConnectionUp (event):
 
 def launch ():
   Timer(120, prune_tainted_list, recurring = True)
-  Timer(300, delete_flows_for_watermark_detection, recurring = True)
+  #Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
 
