@@ -173,11 +173,13 @@ def _handle_flowstats_received(event):
   log.debug("FlowStatsReceived from %s: %s", 
     dpidToStr(event.connection.dpid), stats)
 
-  bytes_count = 0
-  flows_count = 0
-  packets_count = 0
+  
   for f in event.stats:
     if tainted_hosts.has_key(str(f.match.dl_src)):
+      print('***** storing statstics ******')
+      bytes_count = 0
+      flows_count = 0
+      packets_count = 0
       dst = str(f.match.dl_dst)
       src = str(f.match.dl_src)
       bytes_count += f.byte_count
@@ -190,9 +192,7 @@ def _handle_flowstats_received(event):
       (tracked_flows.get(src + '-' + dst))[0] += bytes_count
       (tracked_flows.get(src + '-' + dst))[1] += packets_count
       (tracked_flows.get(src + '-' + dst))[2] += bytes_count
-   
-  log.debug("traffic from %s: %s bytes (%s packets) over %s flows", 
-    dpidToStr(event.connection.dpid), web_bytes, web_packet, web_flows)
+      log.debug("traffic %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows)
 
 def _handle_PacketIn (event):
 
