@@ -119,7 +119,7 @@ def send_message(ip, port):
 
 def listen_for_messages():
   serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  serversock.bind('localhost', 4040)
+  serversock.bind(('localhost', 4040))
   serversock.listen(30)
   while 1:
     (clientsock, addr) = serversock.accept()
