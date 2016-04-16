@@ -22,6 +22,7 @@ spawned_threads_send = {}
 mac_ip_map = {}
 ip_mac_map - {}
 waiting_for_message = []
+tracked_flows = {}
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
@@ -45,7 +46,7 @@ def add_to_tainted_hosts(host):
     return
   if (tainted_hosts.has_key(host)):
     log.debug("host already present in tainted list. Refreshing time")
-    tainted_hosts[host] = time.time()
+    #tainted_hosts[host] = time.time()
   else:
     tainted_hosts[host] = time.time()
     log.debug("added %s to tainted_hosts list ", host)
@@ -86,10 +87,16 @@ def delete_flows_for_watermark_detection():
 def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
   marked_for_deletion = []
+  for host in protected_resources:
+    get_flow_stats(host)
+  for key in tainted_hosts.keys():
+    get_flow_stats(key)
+  pprint.pprint(tracked_flows)
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121) and (key not in waiting_for_message):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
-        marked_for_deletion.append(key)
+      #get_flow_stats(key)
+      marked_for_deletion.append(key)
 
   for host in marked_for_deletion:
     del tainted_hosts[host]
@@ -149,6 +156,39 @@ def receive_data(clientsock,addr):
   clientsock.close()
 
 listen_for_messages()
+
+def get_flow_stats(src):
+  for conn in core.openflow.connections:
+    log.debug("********* requesting flow stats from switch : %s for src :", dpidToStr(conn.dpid), src)
+    msg = of.ofp_flow_stats_request()
+    msg.match.dl_src = EthAddr(src)
+    conn.send(msg)
+  
+
+def _handle_flowstats_received(event):
+  stats = flow_stats_to_list(event.stats)
+  log.debug("FlowStatsReceived from %s: %s", 
+    dpidToStr(event.connection.dpid), stats)
+
+  bytes_count = 0
+  flows_count = 0
+  packets_count = 0
+  for f in event.stats:
+    dst = str(f.match.dl_dst)
+    src = str(f.match.dl_src)
+    bytes_count += f.byte_count
+    packets_count += f.packet_count
+    flows_count += 1
+
+    if not tracked_flows.has_key(src + '-' + dst):
+      tracked_flows.[src + '-' + dst] = [0,0,0]
+
+    (tracked_flows.get(src + '-' + dst))[0] += bytes_count
+    (tracked_flows.get(src + '-' + dst))[1] += packets_count
+    (tracked_flows.get(src + '-' + dst))[2] += bytes_count
+   
+  log.debug("traffic from %s: %s bytes (%s packets) over %s flows", 
+    dpidToStr(event.connection.dpid), web_bytes, web_packet, web_flows)
 
 def _handle_PacketIn (event):
 
