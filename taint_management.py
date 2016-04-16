@@ -161,7 +161,7 @@ def get_flow_stats(src):
   for conn in core.openflow.connections:
     log.debug("********* requesting flow stats from switch : %s for src :", dpidToStr(conn.dpid), src)
     msg = of.ofp_flow_stats_request()
-    msg.match.dl_src = EthAddr(src)
+    msg.match.dl_src = src
     conn.send(msg)
   
 
@@ -294,7 +294,7 @@ def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
 
 def launch ():
-  Timer(120, prune_tainted_list, recurring = True)
+  Timer(60, prune_tainted_list, recurring = True)
   #Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
