@@ -181,7 +181,7 @@ def _handle_flowstats_received(event):
     flows_count += 1
 
     if not tracked_flows.has_key(src + '-' + dst):
-      tracked_flows.[src + '-' + dst] = [0,0,0]
+      tracked_flows[src + '-' + dst] = [0,0,0]
 
     (tracked_flows.get(src + '-' + dst))[0] += bytes_count
     (tracked_flows.get(src + '-' + dst))[1] += packets_count
