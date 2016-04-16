@@ -155,7 +155,7 @@ def receive_data(clientsock,addr):
       print 'sent:' + repr(response(''))
   clientsock.close()
 
-listen_for_messages()
+#listen_for_messages()
 
 def get_flow_stats(src):
   for conn in core.openflow.connections:
