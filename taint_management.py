@@ -87,10 +87,10 @@ def delete_flows_for_watermark_detection():
 def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
   marked_for_deletion = []
-  for host in protected_resources:
-    get_flow_stats(host)
-  for key in tainted_hosts.keys():
-    get_flow_stats(key)
+  #for host in protected_resources:
+    #get_flow_stats(host)
+  #for key in tainted_hosts.keys():
+  get_flow_stats(key)
   pprint.pprint(tracked_flows)
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121) and (key not in waiting_for_message):
@@ -160,9 +160,10 @@ def receive_data(clientsock,addr):
 def get_flow_stats(src):
   for conn in core.openflow.connections:
     log.debug("********* requesting flow stats from switch : %s for src :", dpidToStr(conn.dpid), src)
-    msg = of.ofp_flow_stats_request()
-    msg.match.dl_src = src
-    conn.send(msg)
+    #msg = of.ofp_flow_stats_request()
+    #msg.match.dl_src = src
+    #conn.send(msg)
+    conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
   
 
 def _handle_flowstats_received(event):
@@ -174,18 +175,19 @@ def _handle_flowstats_received(event):
   flows_count = 0
   packets_count = 0
   for f in event.stats:
-    dst = str(f.match.dl_dst)
-    src = str(f.match.dl_src)
-    bytes_count += f.byte_count
-    packets_count += f.packet_count
-    flows_count += 1
+    if tainted_hosts.has_key(str(f.match.dl_src)):
+      dst = str(f.match.dl_dst)
+      src = str(f.match.dl_src)
+      bytes_count += f.byte_count
+      packets_count += f.packet_count
+      flows_count += 1
 
-    if not tracked_flows.has_key(src + '-' + dst):
-      tracked_flows[src + '-' + dst] = [0,0,0]
+      if not tracked_flows.has_key(src + '-' + dst):
+        tracked_flows[src + '-' + dst] = [0,0,0]
 
-    (tracked_flows.get(src + '-' + dst))[0] += bytes_count
-    (tracked_flows.get(src + '-' + dst))[1] += packets_count
-    (tracked_flows.get(src + '-' + dst))[2] += bytes_count
+      (tracked_flows.get(src + '-' + dst))[0] += bytes_count
+      (tracked_flows.get(src + '-' + dst))[1] += packets_count
+      (tracked_flows.get(src + '-' + dst))[2] += bytes_count
    
   log.debug("traffic from %s: %s bytes (%s packets) over %s flows", 
     dpidToStr(event.connection.dpid), web_bytes, web_packet, web_flows)
