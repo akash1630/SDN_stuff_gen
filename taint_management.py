@@ -93,7 +93,7 @@ def prune_tainted_list():
   get_flow_stats()
   pprint.pprint(tracked_flows)
   for key in tainted_hosts.keys():
-    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121) and (key not in waiting_for_message):
+    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
       #get_flow_stats(key)
       marked_for_deletion.append(key)
@@ -101,7 +101,7 @@ def prune_tainted_list():
   for host in marked_for_deletion:
     del tainted_hosts[host]
   log.debug(" ****** deleted %i hosts from the tainted list *********", len(marked_for_deletion))
-  log.debug(" ***** %i tainted hosts being waited on for a message ****", len(waiting_for_message))
+  #log.debug(" ***** %i tainted hosts being waited on for a message ****", len(waiting_for_message))
 
 
 def send_message(ip, port):
@@ -257,7 +257,7 @@ def _handle_PacketIn (event):
         delete_flow_entries(event, packet, packet.dst)
         t = Thread(target = send_message, name = 'send_thread' + dest_eth_addr, args = (dstip, dstport))
         spawned_threads_send[dest_eth_addr] = t
-        waiting_for_message.append(dest_eth_addr)
+        #waiting_for_message.append(dest_eth_addr)
         t.start()
 
 
@@ -268,7 +268,7 @@ def _handle_PacketIn (event):
       append_to_tainted_ports(dest_eth_addr, dstport)
       t = Thread(target = send_message, name = 'send_thread' + dest_eth_addr, args = (dstip, dstport))
       spawned_threads_send[dest_eth_addr] = t
-      waiting_for_message.append(dest_eth_addr)
+      #waiting_for_message.append(dest_eth_addr)
       t.start()
       #delete_flow_entries(event, packet, packet.dst)
 
@@ -300,4 +300,5 @@ def launch ():
   #Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
+  core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
 
