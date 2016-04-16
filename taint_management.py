@@ -90,7 +90,7 @@ def prune_tainted_list():
   #for host in protected_resources:
     #get_flow_stats(host)
   #for key in tainted_hosts.keys():
-  get_flow_stats(key)
+  get_flow_stats()
   pprint.pprint(tracked_flows)
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121) and (key not in waiting_for_message):
@@ -157,9 +157,9 @@ def receive_data(clientsock,addr):
 
 #listen_for_messages()
 
-def get_flow_stats(src):
+def get_flow_stats():
   for conn in core.openflow.connections:
-    log.debug("********* requesting flow stats from switch : %s for src :", dpidToStr(conn.dpid), src)
+    log.debug("********* requesting flow stats from switch : %s :", dpidToStr(conn.dpid))
     #msg = of.ofp_flow_stats_request()
     #msg.match.dl_src = src
     #conn.send(msg)
