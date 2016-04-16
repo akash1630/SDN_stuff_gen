@@ -51,7 +51,6 @@ def add_to_tainted_hosts(host):
     tainted_hosts[host] = time.time()
     log.debug("added %s to tainted_hosts list ", host)
   pprint.pprint(tainted_hosts)
-  pprint.pprint()
 
 def append_to_tainted_ports(host, port):
   global tainted_hosts_ports
@@ -61,6 +60,7 @@ def append_to_tainted_ports(host, port):
       tainted_hosts_ports[host].append(port)
     else:
       tainted_hosts_ports[host] = [port]
+  pprint.pprint(tainted_hosts_ports)
 
 #function to delete flow entries for a tainted host from all switches
 def delete_flow_entries(event, packet, host):
