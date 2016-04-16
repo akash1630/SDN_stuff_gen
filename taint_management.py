@@ -20,7 +20,7 @@ flow_last_packet_received_time = {}                                  #dictionary
 flow_last_packet_sent_time = {}
 spawned_threads_send = {}
 mac_ip_map = {}
-ip_mac_map - {}
+ip_mac_map = {}
 waiting_for_message = []
 tracked_flows = {}
 
