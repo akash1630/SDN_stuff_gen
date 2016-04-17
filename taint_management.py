@@ -31,7 +31,7 @@ data_recvd_from_protected = {}
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
-  log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
+  #log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
   if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
     msg.buffer_id = event.ofp.buffer_id
   else:
@@ -259,7 +259,7 @@ def _handle_PacketIn (event):
     srcport = tcp.srcport
     dstport = tcp.dstport
     if tcp.ACK:
-      log.debug("!!!!!!   TCP ack packet  %s   !!!!!!", key)
+      #log.debug("!!!!!!   TCP ack packet  %s   !!!!!!", key)
       flood_packet(event, of.OFPP_ALL)
       is_tcp_ack = 1
 
