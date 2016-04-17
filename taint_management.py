@@ -83,7 +83,7 @@ def delete_flow_entries(event, packet, host):
 def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
   marked_for_deletion = []
-  if check_for_stats_ctr % 5 == 0:
+  #if check_for_stats_ctr % 5 == 0:
   get_flow_stats()
   pprint.pprint(tracked_flows)
   pprint.pprint(data_recvd_from_protected)
