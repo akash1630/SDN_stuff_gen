@@ -18,8 +18,6 @@ protected_resources = ["00:00:00:00:00:03"]                 #list of protected r
 tainted_hosts = {}
 tainted_hosts_ports = {}
 suspected_hosts = []                                        #list of suspected hosts acting as pivots
-flow_last_packet_received_time = {}                                  #dictionary: key - suspected flows being monitored , value - time since last packet 
-flow_last_packet_sent_time = {}
 spawned_threads_send = {}
 mac_ip_map = {}
 ip_mac_map = {}
@@ -119,7 +117,7 @@ def prune_tainted_list():
 def send_message(ip, port):
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   host = str(ip)
-  port = 8080
+  port = 3030
   sock.settimeout(100)
   sock.connect((host,port))
   r=input('taint, ' + host + ', '+ str(port)) 
@@ -136,7 +134,7 @@ def send_message(ip, port):
 
 def listen_for_messages():
   serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  serversock.bind(('localhost', 8080))
+  serversock.bind(('localhost', 3039))
   serversock.listen(30)
   while 1:
     (clientsock, addr) = serversock.accept()
