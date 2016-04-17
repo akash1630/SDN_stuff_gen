@@ -25,6 +25,8 @@ mac_ip_map = {}
 ip_mac_map = {}
 waiting_for_message = []
 tracked_flows = {}
+check_for_stats_ctr = 1
+data_recvd_from_protected = {}
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
@@ -77,23 +79,21 @@ def delete_flow_entries(event, packet, host):
     conn.send(msg)
   #log.debug("successfully sent delete flow messages!!!!!!")
 
-def delete_flows_for_watermark_detection():
-  for host in tainted_hosts:
-    log.debug("****** deleting flows for tainted hosts to check for correlation ***" + str(host))
-    msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
-    msg.match.dl_src = host
-    for conn in core.openflow.connections:
-      conn.send(msg)
-
-#function tp prune the tailted hosts list
+#function to prune the tainted hosts list
 def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
   marked_for_deletion = []
-  #for host in protected_resources:
-    #get_flow_stats(host)
-  #for key in tainted_hosts.keys():
+  if check_for_stats_ctr % 5 == 0:
   get_flow_stats()
   pprint.pprint(tracked_flows)
+  pprint.pprint(data_recvd_from_protected)
+  for key in tracked_flows.keys():
+    host = (key.split('-'))[0]
+    if data_recvd_from_protected[host] >= .95*tracked_flows[key]:
+      log.debug('********** suspected pivot *********')
+      suspected_hosts.append(host)
+    else:
+      del tracked_flows[key]
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
@@ -157,8 +157,6 @@ def receive_data(clientsock,addr):
       print 'sent:' + repr(response(''))
   clientsock.close()
 
-#listen_for_messages()
-
 def get_flow_stats():
   for conn in core.openflow.connections:
     log.debug("********* requesting flow stats from switch : %s :", dpidToStr(conn.dpid))
@@ -175,7 +173,8 @@ def _handle_flowstats_received(event):
 
   
   for f in event.stats:
-    if tainted_hosts.has_key(str(f.match.dl_src)):
+
+    if tainted_hosts.has_key(str(f.match.dl_src)) or str(f.match.dl_src) in protected_resources:
       print('***** storing statstics ******')
       bytes_count = 0
       flows_count = 0
@@ -186,12 +185,15 @@ def _handle_flowstats_received(event):
       packets_count += f.packet_count
       flows_count += 1
 
+      if src in protected_resources:
+        data_recvd_from_protected[dst] = bytes_count
+
       if not tracked_flows.has_key(src + '-' + dst):
         tracked_flows[src + '-' + dst] = [0,0,0]
 
-      (tracked_flows.get(src + '-' + dst))[0] += bytes_count
-      (tracked_flows.get(src + '-' + dst))[1] += packets_count
-      (tracked_flows.get(src + '-' + dst))[2] += bytes_count
+      (tracked_flows.get(src + '-' + dst))[0] = bytes_count
+      (tracked_flows.get(src + '-' + dst))[1] = packets_count
+      (tracked_flows.get(src + '-' + dst))[2] = flows_count
       log.debug("traffic %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
 
 def _handle_PacketIn (event):
@@ -303,4 +305,6 @@ def launch ():
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
+  thr = Thread(target = listen_for_messages, name = 'listen_for_messages')
+  thr.start()
 
