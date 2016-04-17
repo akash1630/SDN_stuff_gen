@@ -89,11 +89,12 @@ def prune_tainted_list():
   pprint.pprint(data_recvd_from_protected)
   for key in tracked_flows.keys():
     host = (key.split('-'))[0]
-    if data_recvd_from_protected[host] >= .95*tracked_flows[key][0]:
-      log.debug('********** suspected pivot *********')
-      suspected_hosts.append(host)
-    else:
-      del tracked_flows[key]
+    if data_recvd_from_protected.has_key(host):
+      if data_recvd_from_protected[host] >= .95*tracked_flows[key][0]:
+        log.debug('********** suspected pivot *********' + host)
+        suspected_hosts.append(host)
+      else:
+        del tracked_flows[key]
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
@@ -110,8 +111,10 @@ def send_message(ip, port):
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   host = str(ip)
   port = 8080
+  sock.settimeout(100)
   sock.connect((host,port))
   r=input('taint, ' + host + ', '+ str(port)) 
+  log.debug('##### sending taint message : ' + 'taint, ' + host + ', '+ str(port))
   sock.send(r.encode())
   data = ''
   waiting_for_ack = 1
@@ -202,7 +205,7 @@ def _handle_flowstats_received(event):
       (tracked_flows.get(src + '-' + dst))[0] = bytes_count
       (tracked_flows.get(src + '-' + dst))[1] = packets_count
       (tracked_flows.get(src + '-' + dst))[2] = flows_count
-      log.debug("traffic %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
+      log.debug("traffic switch %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
 
 def _handle_PacketIn (event):
 
