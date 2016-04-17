@@ -84,16 +84,21 @@ def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
   marked_for_deletion = []
   #if check_for_stats_ctr % 5 == 0:
-  get_flow_stats()
+  for host in tainted_hosts:
+    get_flow_stats(host)
+  for host in protected_resources:
+    get_flow_stats(host)
+  #get_flow_stats()
   pprint.pprint(tracked_flows)
   pprint.pprint(data_recvd_from_protected)
   for key in tracked_flows.keys():
     host = (key.split('-'))[0]
     if data_recvd_from_protected.has_key(host):
-      if data_recvd_from_protected[host] >= .95*tracked_flows[key][0]:
+      if data_recvd_from_protected[host] >= .95*tracked_flows[key][0] and data_recvd_from_protected[host] <= 1.1*tracked_flows[key][0]:
         log.debug('********** suspected pivot *********' + host)
         suspected_hosts.append(host)
       else:
+        log.debug(' ******** deleting a flow from tracked flows *********' + key)
         del tracked_flows[key]
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
@@ -168,13 +173,14 @@ def receive_data(clientsock,addr):
       break
   clientsock.close()
 
-def get_flow_stats():
+def get_flow_stats(src):
   for conn in core.openflow.connections:
     log.debug("********* requesting flow stats from switch : %s :", dpidToStr(conn.dpid))
-    #msg = of.ofp_flow_stats_request()
+    msg = of.ofp_flow_stats_request()
+    msg.match = of.ofp_match(dl_src = EthAddr(src))
     #msg.match.dl_src = src
-    #conn.send(msg)
-    conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
+    conn.send(msg)
+    #conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
   
 
 def _handle_flowstats_received(event):
