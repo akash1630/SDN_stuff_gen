@@ -141,7 +141,7 @@ def listen_for_messages():
   while 1:
     (clientsock, addr) = serversock.accept()
     print '...connected from:', addr
-    t = Thread(target = receive_data, name = 'receive_thread' + addr, args = (clientsock, addr))
+    t = Thread(target = receive_data, args = (clientsock, addr))
     spawned_threads_receive[ip_mac_map[addr]] = t
     t.start()
 
