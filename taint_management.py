@@ -89,7 +89,7 @@ def prune_tainted_list():
   pprint.pprint(data_recvd_from_protected)
   for key in tracked_flows.keys():
     host = (key.split('-'))[0]
-    if data_recvd_from_protected[host] >= .95*tracked_flows[key]:
+    if data_recvd_from_protected[host] >= .95*tracked_flows[key][0]:
       log.debug('********** suspected pivot *********')
       suspected_hosts.append(host)
     else:
@@ -109,14 +109,17 @@ def prune_tainted_list():
 def send_message(ip, port):
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   host = str(ip)
-  port = 3039
+  port = 8080
   sock.connect((host,port))
   r=input('taint, ' + host + ', '+ str(port)) 
   sock.send(r.encode())
   data = ''
-  while not (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
+  waiting_for_ack = 1
+  while waiting_for_ack: 
     data = sock.recv(1024).decode()
-    print (data)
+    if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
+      print (data + '    received ack!!')
+      waiting_for_ack = 0
   sock.close ()
 
 def listen_for_messages():
@@ -131,8 +134,9 @@ def listen_for_messages():
     t.start()
 
 def receive_data(clientsock,addr):
-  while 1:
-    data = clientsock.recv(BUFF)
+  send_pending = 1
+  while send_pending:
+    data = clientsock.recv(1024)
     print 'data:' + repr(data)
     if not data: break
     data_split = data.split(',')
@@ -145,6 +149,8 @@ def receive_data(clientsock,addr):
       append_to_tainted_ports(host, port)
       clientsock.send(response('ack, ' + host + ', '+ str(port)))
       print 'sent:' + repr(response(''))
+      send_pending = 0
+      break
     elif data.find('pivot') >= 0:
       for el in data_split:
         el.strip()
@@ -155,6 +161,8 @@ def receive_data(clientsock,addr):
       suspected_hosts.append(host)
       clientsock.send(response('ack, ' + host + ', '+ str(port)))
       print 'sent:' + repr(response(''))
+      send_pending = 0
+      break
   clientsock.close()
 
 def get_flow_stats():
