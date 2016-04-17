@@ -259,8 +259,14 @@ def _handle_PacketIn (event):
     srcport = tcp.srcport
     dstport = tcp.dstport
     if tcp.ACK:
-      #log.debug("!!!!!!   TCP ack packet  %s   !!!!!!", key)
+      log.debug("!!!!!!   TCP ack packet  %s   !!!!!!", key)
       flood_packet(event, of.OFPP_ALL)
+      msg = of.ofp_flow_mod()
+      msg.match = of.ofp_match.from_packet(packet, event.port)
+      msg.priority = 1010
+      msg.actions.append(of.ofp_action_output(port = event.port))
+      msg.data = event.ofp
+      event.connection.send(msg)
       is_tcp_ack = 1
 
 
