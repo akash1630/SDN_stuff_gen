@@ -59,7 +59,8 @@ def append_to_tainted_ports(host, port):
   log.debug('Appending a new tainted port')
   if port > 0:
     if tainted_hosts_ports.has_key(host):
-      tainted_hosts_ports[host].append(port)
+      if port not in tainted_hosts_ports[host]:
+        tainted_hosts_ports[host].append(port)
     else:
       tainted_hosts_ports[host] = [port]
   pprint.pprint(tainted_hosts_ports)
@@ -77,6 +78,20 @@ def delete_flow_entries(event, packet, host):
     conn.send(msg)
   #log.debug("successfully sent delete flow messages!!!!!!")
 
+def isolate_host(host):
+  log.debug('----------------isolating host : ' + host + ' -------------')
+  msg1 = of.ofp_flow_mod(command = of.OFPFC_DELETE)
+  msg1.match.dl_src = host
+
+  msg2 = of.ofp_flow_mod()
+  msg2.match.dl_src = host
+  msg2.priority = 1100
+  msg2.actions.append()
+  event.connection.send(msg)
+  for conn in core.openflow.connections:
+    conn.send(msg1)
+    conn.send(msg2)
+
 #function to prune the tainted hosts list
 def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
@@ -91,6 +106,7 @@ def prune_tainted_list():
       if data_recvd_from_protected[host] >= .95*tracked_flows[key][0] and data_recvd_from_protected[host] <= 1.1*tracked_flows[key][0]:
         log.debug('********** suspected pivot *********' + host)
         suspected_hosts.append(host)
+        isolate_host(host)
       else:
         log.debug(' ******** deleting a flow from tracked flows as sizes do not correlate  - ' + key)
         del tracked_flows[key]
@@ -152,6 +168,7 @@ def receive_data(clientsock,addr):
       add_to_tainted_hosts(host)
       append_to_tainted_ports(host, port)
       suspected_hosts.append(host)
+      isolate_host(host)
       log.debug(' ######## suspected pivot ######### ' + host)
       clientsock.send(response('ack, ' + host + ', '+ str(port)))
       print 'sent:' + repr(response(''))
