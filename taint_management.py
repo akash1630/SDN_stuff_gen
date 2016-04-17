@@ -50,7 +50,7 @@ def drop_packet(event):
       return
     msg.data = event.ofp.data
 
-  msg.actions.append(of.ofp_action_output(port = of.OFPP_TABLE))
+  #msg.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
   event.connection.send(msg)
 
 #function to add a host to the tainted list
