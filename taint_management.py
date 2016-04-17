@@ -85,7 +85,6 @@ def isolate_host(host):
 
   msg2 = of.ofp_flow_mod()
   msg2.match.dl_src = host
-  msg2.priority = 1100
   msg2.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
   for conn in core.openflow.connections:
     conn.send(msg1)
@@ -241,6 +240,9 @@ def _handle_PacketIn (event):
   key = src_eth_addr + dest_eth_addr
   srcip = ''
   dstip = ''
+
+  if src_eth_addr in suspected_hosts:
+    return
 
   ipv4_pack = packet.find("ipv4")
   if ipv4_pack:
