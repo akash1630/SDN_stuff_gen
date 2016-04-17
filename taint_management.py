@@ -81,11 +81,6 @@ def delete_flow_entries(event, packet, host):
 def prune_tainted_list():
   log.debug("****** pruning tainted hosts list **********")
   marked_for_deletion = []
-  #if check_for_stats_ctr % 5 == 0:
-  #for host in tainted_hosts:
-    #get_flow_stats(host)
-  #for host in protected_resources:
-    #get_flow_stats(host)
   get_flow_stats()
   pprint.pprint(tracked_flows)
   pprint.pprint(data_recvd_from_protected)
@@ -103,7 +98,7 @@ def prune_tainted_list():
       log.debug('******* deleting a flow from tracked flows as no data info from protected_resources  - ' + key)
       del tracked_flows[key]
   for key in tainted_hosts.keys():
-    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 151):
+    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 201):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
       #get_flow_stats(key)
       marked_for_deletion.append(key)
@@ -111,7 +106,6 @@ def prune_tainted_list():
   for host in marked_for_deletion:
     del tainted_hosts[host]
   log.debug(" ****** deleted %i hosts from the tainted list *********", len(marked_for_deletion))
-  #log.debug(" ***** %i tainted hosts being waited on for a message ****", len(waiting_for_message))
 
 
 def send_message(ip, port):
@@ -150,18 +144,7 @@ def receive_data(clientsock,addr):
     print 'data:' + repr(data)
     if not data: break
     data_split = data.split(',')
-    if data.find('taint') >= 0:
-      for el in data_split:
-        el.strip()
-      host = data_split[1]
-      port = int(data_split[2])
-      add_to_tainted_hosts(host)
-      append_to_tainted_ports(host, port)
-      clientsock.send(response('ack, ' + host + ', '+ str(port)))
-      print 'sent:' + repr(response(''))
-      send_pending = 0
-      break
-    elif data.find('pivot') >= 0:
+    if data.find('pivot') >= 0:
       for el in data_split:
         el.strip()
       host = data_split[1]
@@ -169,6 +152,12 @@ def receive_data(clientsock,addr):
       add_to_tainted_hosts(host)
       append_to_tainted_ports(host, port)
       suspected_hosts.append(host)
+      log.debug(' ######## suspected pivot ######### ' + host)
+      clientsock.send(response('ack, ' + host + ', '+ str(port)))
+      print 'sent:' + repr(response(''))
+      send_pending = 0
+      break
+    else:
       clientsock.send(response('ack, ' + host + ', '+ str(port)))
       print 'sent:' + repr(response(''))
       send_pending = 0
@@ -178,10 +167,6 @@ def receive_data(clientsock,addr):
 def get_flow_stats():
   for conn in core.openflow.connections:
     log.debug("********* requesting flow stats from switch : %s :", dpidToStr(conn.dpid))
-    #msg = of.ofp_flow_stats_request()
-    #msg.match = of.ofp_match(dl_src = EthAddr(src))
-    #msg.match.dl_src = src
-    #conn.send(msg)
     conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
   
 
