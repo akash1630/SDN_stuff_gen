@@ -105,7 +105,7 @@ def prune_tainted_list():
       log.debug('******* deleting a flow from tracked flows as no data info from protected_resources  - ' + key)
       del tracked_flows[key]
   for key in tainted_hosts.keys():
-    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
+    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 151):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
       #get_flow_stats(key)
       marked_for_deletion.append(key)
