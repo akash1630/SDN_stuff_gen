@@ -40,6 +40,18 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
   msg.actions.append(of.ofp_action_output(port = dst_port))
   event.connection.send(msg)
 
+def drop_packet(event):
+  msg = of.ofp_packet_out(in_port=event.ofp.in_port)
+  log.debug("dropping packet for buffer_id " + str(event.ofp.buffer_id))
+  if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
+    msg.buffer_id = event.ofp.buffer_id
+  else:
+    if event.ofp.data:
+      return
+    msg.data = event.ofp.data
+
+  msg.actions.append(of.ofp_action_output(port = of.OFPP_TABLE))
+  event.connection.send(msg)
 
 #function to add a host to the tainted list
 def add_to_tainted_hosts(host):
@@ -82,13 +94,8 @@ def isolate_host(host):
   log.debug('----------------isolating host : ' + host + ' -------------')
   msg1 = of.ofp_flow_mod(command = of.OFPFC_DELETE)
   msg1.match.dl_src = host
-
-  msg2 = of.ofp_flow_mod()
-  msg2.match.dl_src = host
-  msg2.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
   for conn in core.openflow.connections:
     conn.send(msg1)
-    conn.send(msg2)
 
 #function to prune the tainted hosts list
 def prune_tainted_list():
@@ -242,6 +249,7 @@ def _handle_PacketIn (event):
   dstip = ''
 
   if src_eth_addr in suspected_hosts:
+    drop_packet(event)
     return
 
   ipv4_pack = packet.find("ipv4")
