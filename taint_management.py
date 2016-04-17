@@ -93,13 +93,17 @@ def prune_tainted_list():
   pprint.pprint(data_recvd_from_protected)
   for key in tracked_flows.keys():
     host = (key.split('-'))[0]
+    print.debug('   ******* check for host : ' + host)
     if data_recvd_from_protected.has_key(host):
       if data_recvd_from_protected[host] >= .95*tracked_flows[key][0] and data_recvd_from_protected[host] <= 1.1*tracked_flows[key][0]:
         log.debug('********** suspected pivot *********' + host)
         suspected_hosts.append(host)
       else:
-        log.debug(' ******** deleting a flow from tracked flows *********' + key)
+        log.debug(' ******** deleting a flow from tracked flows as sizes do not correlate  - ' + key)
         del tracked_flows[key]
+    else:
+      log.debug('******* deleting a flow from tracked flows as no data info from protected_resources  - ' + key)
+      del tracked_flows[key]
   for key in tainted_hosts.keys():
     if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 121):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
