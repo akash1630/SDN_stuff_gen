@@ -92,10 +92,7 @@ def delete_flow_entries(event, packet, host):
 
 def isolate_host(host):
   log.debug('----------------isolating host : ' + host + ' -------------')
-  msg1 = of.ofp_flow_mod(command = of.OFPFC_DELETE)
-  msg1.match.dl_src = host
-  for conn in core.openflow.connections:
-    conn.send(msg1)
+  
 
 #function to prune the tainted hosts list
 def prune_tainted_list():
@@ -249,6 +246,7 @@ def _handle_PacketIn (event):
   dstip = ''
 
   if src_eth_addr in suspected_hosts:
+    delete_flow_entries(event, packet, packet.src)
     drop_packet(event)
     return
 
