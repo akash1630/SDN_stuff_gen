@@ -42,7 +42,7 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
 
 def drop_packet(event):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
-  log.debug("dropping packet for buffer_id " + str(event.ofp.buffer_id))
+  #log.debug("dropping packet for buffer_id " + str(event.ofp.buffer_id))
   if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
     msg.buffer_id = event.ofp.buffer_id
   else:
@@ -237,7 +237,7 @@ def _handle_PacketIn (event):
 
   packet =event.parsed
 
-  log.debug("packet in buffer_id check : " +str(event.ofp.buffer_id))
+  #log.debug("packet in buffer_id check : " +str(event.ofp.buffer_id))
 
   dest_eth_addr = str(packet.dst)
   src_eth_addr = str(packet.src)
