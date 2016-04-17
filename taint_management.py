@@ -192,7 +192,7 @@ def _handle_flowstats_received(event):
       (tracked_flows.get(src + '-' + dst))[0] += bytes_count
       (tracked_flows.get(src + '-' + dst))[1] += packets_count
       (tracked_flows.get(src + '-' + dst))[2] += bytes_count
-      log.debug("traffic %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows)
+      log.debug("traffic %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
 
 def _handle_PacketIn (event):
 
