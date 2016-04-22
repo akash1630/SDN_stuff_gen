@@ -128,22 +128,27 @@ def prune_tainted_list():
 
 
 def send_message(ip, port):
+  log.debug('##### sending taint message : ' + 'taint, ' + host + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   host = str(ip)
   port = 8080
   sock.settimeout(100)
-  sock.connect((host,port))
-  r=input('taint, ' + host + ', '+ str(port)) 
-  log.debug('##### sending taint message : ' + 'taint, ' + host + ', '+ str(port))
-  sock.send(r.encode())
-  data = ''
-  waiting_for_ack = 1
-  while waiting_for_ack: 
-    data = sock.recv(1024).decode()
-    if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
-      print (data + '    received ack!!')
-      waiting_for_ack = 0
-  sock.close ()
+  try:
+    sock.connect((host,port))
+    r=input('taint, ' + host + ', '+ str(port)) 
+    #log.debug('##### sending taint message : ' + 'taint, ' + host + ', '+ str(port))
+    sock.send(r.encode())
+    data = ''
+    waiting_for_ack = 1
+    while waiting_for_ack: 
+      data = sock.recv(1024).decode()
+      if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
+        print (data + '    received ack!!')
+        waiting_for_ack = 0
+    sock.close()
+  except:
+    #log.debug(" Host port denied connection")
+    sock.close()
 
 def listen_for_messages():
   serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
