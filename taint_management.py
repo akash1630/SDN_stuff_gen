@@ -87,7 +87,6 @@ def isolate_host(host):
   msg2.match.dl_src = host
   msg2.priority = 1100
   msg2.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
-  event.connection.send(msg)
   for conn in core.openflow.connections:
     conn.send(msg1)
     conn.send(msg2)
