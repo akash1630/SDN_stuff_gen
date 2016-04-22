@@ -19,6 +19,7 @@ tainted_hosts = {}
 tainted_hosts_ports = {}
 suspected_hosts = []                                        #list of suspected hosts acting as pivots
 spawned_threads_send = {}
+spawned_threads_receive = {}
 mac_ip_map = {}
 ip_mac_map = {}
 waiting_for_message = []
