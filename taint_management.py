@@ -86,7 +86,7 @@ def isolate_host(host):
   msg2 = of.ofp_flow_mod()
   msg2.match.dl_src = host
   msg2.priority = 1100
-  msg2.actions.append(of.ofp_action_output(port = OFPP_NONE))
+  msg2.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
   event.connection.send(msg)
   for conn in core.openflow.connections:
     conn.send(msg1)
@@ -323,7 +323,7 @@ def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
 
 def launch ():
-  Timer(60, prune_tainted_list, recurring = True)
+  Timer(50, prune_tainted_list, recurring = True)
   #Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
