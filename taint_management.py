@@ -128,7 +128,7 @@ def prune_tainted_list():
 
 
 def send_message(ip, port):
-  log.debug('##### sending taint message : ' + 'taint, ' + host + ', '+ str(port))
+  log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   host = str(ip)
   port = 8080
