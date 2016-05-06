@@ -27,7 +27,7 @@ tracked_flows = {}
 check_for_stats_ctr = 1
 data_recvd_from_protected = {}
 prune_counter = 0
-samples = []
+samples = np.random.normal(250, 35, 1000)
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
