@@ -117,7 +117,8 @@ def prune_tainted_list():
   get_flow_stats()
   pprint.pprint(tracked_flows)
   pprint.pprint(data_recvd_from_protected)
-  index = random.randint(0,1000)
+  index = random.randint(0,999)
+  log.debug("***** selected index : " + str(index) + "    and pruning interval : " + str(samples[index]) + " *****")
   for key in tracked_flows.keys():
     host = (key.split('-'))[0]
     log.debug('   ******* check for host : ' + host)
