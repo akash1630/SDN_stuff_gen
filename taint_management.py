@@ -123,7 +123,7 @@ def prune_tainted_list():
   log.debug("***** selected index : " + str(index) + "    and pruning interval : " + str(samples[index]) + " *****")
   for key in tracked_flows.keys():
     host = (key.split('-'))[0]
-    log.debug('   ******* check for host : ' + host + "  and flow : " + key + "  traffic : " + tracked_flows[key][0])
+    log.debug('   ******* check for host : ' + host + "  and flow : " + key + "  traffic : " + str(tracked_flows[key][0])
     if data_recvd_from_protected.has_key(host):
       if data_recvd_from_protected[host] >= tracked_flows[key][0] and data_recvd_from_protected[host] <= 1.15*tracked_flows[key][0]:
         log.debug('********** suspected pivot *********' + host)
