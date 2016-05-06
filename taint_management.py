@@ -217,9 +217,8 @@ def get_flow_stats():
 
 def _handle_flowstats_received(event):
   stats = flow_stats_to_list(event.stats)
-  log.debug("FlowStatsReceived from %s: %s", 
-    dpidToStr(event.connection.dpid), stats)
-
+  #log.debug("FlowStatsReceived from %s: %s", dpidToStr(event.connection.dpid), stats)
+  log.debug("FlowStatsReceived from %s", dpidToStr(event.connection.dpid))
   
   for f in event.stats:
 
