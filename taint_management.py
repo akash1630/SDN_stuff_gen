@@ -8,6 +8,8 @@ from pox.lib.util import dpidToStr
 import socket
 import threading
 from threading import Thread
+import numpy as np
+import scipy as sp
 
 from pox.openflow.of_json import *
 #import taint_db_impl
