@@ -26,6 +26,8 @@ waiting_for_message = []
 tracked_flows = {}
 check_for_stats_ctr = 1
 data_recvd_from_protected = {}
+prune_counter = 0
+samples = []
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
@@ -97,11 +99,25 @@ def isolate_host(host):
 
 #function to prune the tainted hosts list
 def prune_tainted_list():
+  global prune_counter
+  global samples
   log.debug("****** pruning tainted hosts list **********")
+  if(prune_counter%30 == 29):
+    mu = random.uniform(250, 50)
+    sigma = random.uniform(0, 35)
+    mu_sigma_vals = [0,0]
+    mu_sigma_vals[0] = mu
+    mu_sigma_vals[1] = sigma
+    samples = np.random.normal(mu, sigma, 1000)
+    prune_counter = 0
+  else:
+    prune_counter =+ 1
+
   marked_for_deletion = []
   get_flow_stats()
   pprint.pprint(tracked_flows)
   pprint.pprint(data_recvd_from_protected)
+  index = random.randint(0,1000)
   for key in tracked_flows.keys():
     host = (key.split('-'))[0]
     log.debug('   ******* check for host : ' + host)
@@ -117,7 +133,7 @@ def prune_tainted_list():
       log.debug('******* deleting a flow from tracked flows as no data info from protected_resources  - ' + key)
       del tracked_flows[key]
   for key in tainted_hosts.keys():
-    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= 201):
+    if (key not in suspected_hosts) and (time.time() - tainted_hosts[key] >= samples[index]):
       #if time.time() - last_watermarked_flow_time[key] >= 121:
       #get_flow_stats(key)
       marked_for_deletion.append(key)
