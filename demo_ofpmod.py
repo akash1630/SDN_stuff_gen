@@ -6,6 +6,7 @@ from pox.lib.util import dpidToStr
 
 log = core.getLogger()
 syn_counter = 0
+mac_port_dict = {}  
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
