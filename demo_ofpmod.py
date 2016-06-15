@@ -49,10 +49,10 @@ def _handle_PacketIn (event):
                 log.debug("SYN Packet!!")
                 syn_counter = syn_counter + 1
 
-      if packet.dst not in mac_port_dict:
+    if packet.dst not in mac_port_dict:
             log.debug("flooding to all ports as no entry in dictionary")
             flood_packet(event, of.OFPP_ALL)
-          else:
+    else:
             port = mac_port_dict[packet.dst]
             log.debug("setting a flow table entry as matching entry found in dict - " + src_eth_addr + "    " + dest_eth_addr)
             msg = of.ofp_flow_mod()
