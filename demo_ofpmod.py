@@ -11,6 +11,7 @@ mac_port_dict = {}
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
+  log.debug("flooding paket!!")
   #log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
   if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
     msg.buffer_id = event.ofp.buffer_id
@@ -27,9 +28,9 @@ def _handle_PacketIn (event):
 
   global syn_counter
   packet =event.parsed
-  send_packet(event, of.OFPP_ALL)
-  log.debug("[+] Broadcasting %s.%i -> %s.%i" %
-    (packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
+  #send_packet(event, of.OFPP_ALL)
+  #log.debug("[+] Broadcasting %s.%i -> %s.%i" %
+    #(packet.src, event.ofp.in_port, packet.dst, of.OFPP_ALL))
 
   p = packet
   while p:
