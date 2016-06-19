@@ -8,7 +8,7 @@ log = core.getLogger()
 class ThreadedMessageHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         try:
-		self.data = self.rfile.readline().strip()
+		self.data = self.request.recv(4096)
 	        host_msg = self.data.split(',')
 	        if ('taint' in host_msg[0].lower()):
 		        rhost = ipaddr.IPAddress(host_msg[1])
@@ -20,6 +20,9 @@ class ThreadedMessageHandler(SocketServer.BaseRequestHandler):
 				rtn_msg = 'ack,'+str(rhost)+','+str(rport)+","+str(lport)+'\n'
 			        self.wfile.write(rtn_msg)
 			        self.wfile.close()
+		cur_thread = threading.current_thread()
+        response = "{}: {}".format(cur_thread.name, self.data)
+        self.request.sendall(response)
 	except Exception as e:
 		log.error('[!] Failed Handler: '+str(e))
 
