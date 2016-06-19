@@ -7,7 +7,7 @@ import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 import socket
 import threading
-import psutil
+#import psutil
 import SocketServer
 from threading import Thread
 import numpy as np
@@ -186,6 +186,7 @@ def listen_for_messages():
     t.start()
 
 def taint_msg_listener():
+  log.debug('------- tinat message listener thread setup start ------')
   listener = ListenThread('0.0.0.0',8888)
 
 def receive_data(clientsock,addr):
@@ -367,6 +368,6 @@ def launch ():
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
-  thr = Thread(target = listen_for_messages, name = 'listen_for_messages')
+  thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
   thr.start()
 
