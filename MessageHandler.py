@@ -1,13 +1,14 @@
 import socket
 import threading
 import SocketServer
+from pox.core import core
 
 log = core.getLogger()
 
 class ThreadedMessageHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         try:
-		    self.data = self.rfile.readline().strip()
+		self.data = self.rfile.readline().strip()
 	        host_msg = self.data.split(',')
 	        if ('taint' in host_msg[0].lower()):
 		        rhost = ipaddr.IPAddress(host_msg[1])
@@ -19,8 +20,8 @@ class ThreadedMessageHandler(SocketServer.BaseRequestHandler):
 				rtn_msg = 'ack,'+str(rhost)+','+str(rport)+","+str(lport)+'\n'
 			        self.wfile.write(rtn_msg)
 			        self.wfile.close()
-		except Exception as e:
-				self.logger.error('[!] Failed Handler: '+str(e))
+	except Exception as e:
+		log.error('[!] Failed Handler: '+str(e))
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -30,14 +31,16 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 class ListenThread():
 	def __init__(self,host,port):
 		try:
-	        self.host='0.0.0.0'
-	        self.port=port
-	        self.server = ThreadedTCPServer((self.host,self.port), ThreadedMessageHandler)
+	        	self.host='0.0.0.0'
+	        	self.port=port
+	        	self.server = ThreadedTCPServer((self.host,self.port), ThreadedMessageHandler)
 
-		    # Start a thread with the server -- that thread will then start one
-		    # more thread for each request
-		    server_thread = threading.Thread(target=server.serve_forever)
-		    # Exit the server thread when the main thread terminates
-		    server_thread.daemon = True
-		    server_thread.start()
-		    print "Server loop running in thread:", server_thread.name
+		    	# Start a thread with the server -- that thread will then start one
+		    	# more thread for each request
+		    	server_thread = threading.Thread(target=server.serve_forever)
+		    	# Exit the server thread when the main thread terminates
+		    	server_thread.daemon = True
+		    	server_thread.start()
+		    	log.debug("listener setup:  running in thread:" +str( server_thread.name))
+		except Exception as e:
+			log.error('listener setup error!!')
