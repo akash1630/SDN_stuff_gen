@@ -5,10 +5,12 @@ from pox.core import core
 
 log = core.getLogger()
 
-class ThreadedMessageHandler(SocketServer.BaseRequestHandler):
+class ThreadedMessageHandler(SocketServer.StreamRequestHandler):
     def handle(self):
-        try:
-		self.data = self.request.recv(4096)
+    	try:
+    		log.debug("----- hanlding message ------")
+			self.data = self.rfile.readline().strip()
+			log.debug("received message : " + self.data)
 	        host_msg = self.data.split(',')
 	        if ('taint' in host_msg[0].lower()):
 		        rhost = ipaddr.IPAddress(host_msg[1])
@@ -40,10 +42,10 @@ class ListenThread():
 
 		    	# Start a thread with the server -- that thread will then start one
 		    	# more thread for each request
-		    	server_thread = threading.Thread(target=server.serve_forever)
+		    	server_thread = threading.Thread(target=self.server.serve_forever)
 		    	# Exit the server thread when the main thread terminates
 		    	server_thread.daemon = True
 		    	server_thread.start()
 		    	log.debug("listener setup:  running in thread:" +str( server_thread.name))
 		except Exception as e:
-			log.error('listener setup error!!')
+			log.error('listener setup error!!' + str(e))
