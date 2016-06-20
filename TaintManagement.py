@@ -6,26 +6,22 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 import socket
-import struct
 import ipaddr
 import threading
-#import psutil
 import SocketServer
 from threading import Thread
 import numpy as np
 import scipy as sp
 
-#from Listener import ListenThread
-
 from pox.openflow.of_json import *
 #import taint_db_impl
 
 log = core.getLogger()
-ip_port_dict_local = {}                                          #mapping for destination mac addr and egres port
-protected_resources = ["10.0.0.3"]                          #list of protected resources
+ip_port_dict_local = {}                                           #mapping for destination mac addr and egres port
+protected_resources = ["10.0.0.3"]                                #list of protected resources
 tainted_hosts = {}
 tainted_hosts_ports = {}
-suspected_hosts = []                                        #list of suspected hosts acting as pivots
+suspected_hosts = []                                              #list of suspected hosts acting as pivots
 spawned_threads_send = {}
 spawned_threads_receive = {}
 mac_ip_map = {}
@@ -36,10 +32,17 @@ check_for_stats_ctr = 1
 data_recvd_from_protected = {}
 prune_counter = 0
 samples = np.random.normal(250, 35, 1000)
+
+#############################################################################
+#define internal network here - ****IMPORTANT****
+#############################################################################
 internal_ips = "10.0.0.0/24"
 internal_network = ipaddr.IPNetwork(internal_ips)
 
+
+#############################################################################
 #function to flood packets
+#############################################################################
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
   #log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
@@ -53,6 +56,10 @@ def flood_packet (event, dst_port = of.OFPP_ALL):
   msg.actions.append(of.ofp_action_output(port = dst_port))
   event.connection.send(msg)
 
+
+##############################################################################
+#function to drop packets for isolating pivots
+##############################################################################
 def drop_packet(event):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
   #log.debug("dropping packet for buffer_id " + str(event.ofp.buffer_id))
@@ -66,7 +73,10 @@ def drop_packet(event):
   #msg.actions.append(of.ofp_action_output(port = of.OFPP_NONE))
   event.connection.send(msg)
 
+
+#############################################################################
 #function to add a host to the tainted list
+#############################################################################
 def add_to_tainted_hosts(host):
   global tainted_hosts
   if host in protected_resources:
@@ -79,6 +89,10 @@ def add_to_tainted_hosts(host):
     log.debug("added %s to tainted_hosts list ", host)
   pprint.pprint(tainted_hosts)
 
+
+##############################################################################
+#function to add/append tainted ports to the global dict
+##############################################################################
 def append_to_tainted_ports(host, port):
   global tainted_hosts_ports
   log.debug('Appending a new tainted port')
@@ -90,7 +104,10 @@ def append_to_tainted_ports(host, port):
       tainted_hosts_ports[host] = [port]
   pprint.pprint(tainted_hosts_ports)
 
+
+##############################################################################
 #function to delete flow entries for a tainted host from all switches
+##############################################################################
 def delete_flow_entries(host):
   log.debug("deleting flow table entries for " + str(host))
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
@@ -98,15 +115,15 @@ def delete_flow_entries(host):
   msg.match.dl_type = 0x800
   msg.match.nw_src = host
   for conn in core.openflow.connections:
-    #log.debug("********* sending a flow removal message to switch : %s ", dpidToStr(conn.dpid))
     conn.send(msg)
-  #log.debug("successfully sent delete flow messages!!!!!!")
 
 def isolate_host(host):
   log.debug('----------------isolating host : ' + host + ' -------------')
   
 
-#function to prune the tainted hosts list
+#################################################################################
+#function to prune tainted list based on a distributed interval - NOT BEING USED
+#################################################################################
 def prune_tainted_list():
   global prune_counter
   global samples
@@ -154,6 +171,9 @@ def prune_tainted_list():
   log.debug(" ****** deleted %i hosts from the tainted list *********", len(marked_for_deletion))
 
 
+##############################################################################
+#function to send taint message to hosts
+##############################################################################
 def send_message(ip, port):
   #log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -184,55 +204,29 @@ def send_message(ip, port):
     log.debug(" Host port denied connection")
     sock.close()
 
-def listen_for_messages():
-  serversock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  serversock.bind(('localhost', 8888))
-  serversock.listen(30)
-  while 1:
-    (clientsock, addr) = serversock.accept()
-    print '...connected from:', addr
-    t = Thread(target = receive_data, args = (clientsock, addr))
-    #spawned_threads_receive[ip_mac_map[addr]] = t
-    t.start()
 
+##############################################################################
+#function to start a listener thread
+##############################################################################
 def taint_msg_listener():
   log.debug('------- taint message listener thread setup start ------')
   listener = ListenThread('0.0.0.0',9999)
+  listener.daemon = True
+  listener.start()
 
-def receive_data(clientsock,addr):
-  send_pending = 1
-  while send_pending:
-    data = clientsock.recv(1024)
-    print 'data:' + repr(data)
-    if not data: break
-    data_split = data.split(',')
-    if data.find('taint') >= 0:
-      for el in data_split:
-        el.strip()
-      host = data_split[1]
-      port = int(data_split[2])
-      add_to_tainted_hosts(host)
-      append_to_tainted_ports(host, port)
-      suspected_hosts.append(host)
-      isolate_host(host)
-      log.debug(' ######## suspected pivot ######### ' + host)
-      clientsock.send(response('ack, ' + host + ', '+ str(port)))
-      print 'sent:' + repr(response(''))
-      send_pending = 0
-      break
-    else:
-      clientsock.send(response('ack, ' + host + ', '+ str(port)))
-      print 'sent:' + repr(response(''))
-      send_pending = 0
-      break
-  clientsock.close()
 
+##############################################################################
+#function to request flow stats from switches
+##############################################################################
 def get_flow_stats():
   for conn in core.openflow.connections:
     log.debug("********* requesting flow stats from switch : %s :", dpidToStr(conn.dpid))
     conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
-  
 
+  
+##############################################################################
+#EVent handler for flow stats recieved event
+##############################################################################
 def _handle_flowstats_received(event):
   stats = flow_stats_to_list(event.stats)
   #log.debug("FlowStatsReceived from %s: %s", dpidToStr(event.connection.dpid), stats)
@@ -262,6 +256,10 @@ def _handle_flowstats_received(event):
       (tracked_flows.get(src + '-' + dst))[2] = flows_count
       log.debug("traffic switch %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
 
+
+#############################################################################
+#Event handler for packet_in event
+#############################################################################
 def _handle_PacketIn (event):
 
   global forward_rule_set
@@ -325,14 +323,6 @@ def _handle_PacketIn (event):
       else:
         log.debug(" __________ Traffic from protected resource to normal host __________ ")
         taint_action(dstip, dstport)
-        #add_to_tainted_hosts(dest_eth_addr)
-        #append_to_tainted_ports(dest_eth_addr, dstport)
-        #delete_flow_entries(dest_eth_addr)
-        #t = Thread(target = send_message, name = 'send_thread' + dest_eth_addr, args = (dstip, dstport))
-        #spawned_threads_send[dest_eth_addr] = t
-        #waiting_for_message.append(dest_eth_addr)
-        #t.start()
-
 
     elif(tainted_hosts.has_key(srcip) and (dstip not in protected_resources)):
       log.debug("-------- Traffic coming from tainted host --------")
@@ -340,12 +330,6 @@ def _handle_PacketIn (event):
         if(srcport in tainted_hosts_ports[srcip]):
           log.debug("-------- traffic coming from a tainted port on a tainted host --------")
           taint_action(dstip, dstport)
-          #delete_flow_entries(dest_eth_addr)
-          #add_to_tainted_hosts(dest_eth_addr)
-          #append_to_tainted_ports(dest_eth_addr, dstport)
-          #t = Thread(target = send_message, name = 'send_thread' + dest_eth_addr, args = (dstip, dstport))
-          #spawned_threads_send[dest_eth_addr] = t
-          #t.start()
         else:
           log.debug("------ CLean traffic from a tainted host---------- ")
 
@@ -369,6 +353,10 @@ def _handle_PacketIn (event):
     log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     flood_packet(event, of.OFPP_ALL)
 
+
+#############################################################################
+#function to perform the taint operations
+#############################################################################
 def taint_action(ip, port):
   log.debug("<<<<<<<  Performing taint actions >>>>>>>>>>")
   add_to_tainted_hosts(ip)
@@ -379,6 +367,10 @@ def taint_action(ip, port):
   #waiting_for_message.append(dest_eth_addr)
   t.start()
 
+
+#############################################################################
+#function to check if the current tainted connection indicates pivoting
+#############################################################################
 def check_for_pivot(ip):
   log.debug("------ Checking if pivot (tainted connection to external network) ----------")
   ipaddr_to_check = ipaddr.IPAddress(ip)
@@ -386,18 +378,32 @@ def check_for_pivot(ip):
   return is_external
 
 
+#############################################################################
+#function to decde the action to be performed after pivot detection
+#############################################################################
+def decide_action_pivot():
+  pass
+
+
+#############################################################################
+#Event handler for connectionUp event
+#############################################################################
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
 
+
+#############################################################################
+#Launch method for the controller app
+#############################################################################
 def launch ():
   #Timer(50, prune_tainted_list, recurring = True)
-  #Timer(1, taint_msg_listener, recurring = False)
+  Timer(.5, taint_msg_listener, recurring = False)
   #Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
-  thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
-  thr.start()
+  #thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
+  #thr.start()
 
 class MessageHandler(SocketServer.StreamRequestHandler):
     def handle(self):
@@ -422,7 +428,8 @@ class MessageHandler(SocketServer.StreamRequestHandler):
                   	pivot = False
                   	pivot = check_for_pivot(host_to_taint)
                   	if(pivot):
-                    		log.debug('######------------- Pivot Detected ---------------######')
+                    		log.debug('######------------- Pivot Detected : Deciding action---------------######')
+                        decide_action_pivot()
                   	else:
                     		log.debug('------ tainted host sending tainted data to internal hosts ----------')
                 	  	taint_action(host_to_taint, tainted_dest_port)
@@ -437,19 +444,17 @@ class ListenThread(threading.Thread):
       self.host='0.0.0.0'
       self.port=port
       self.server = SocketServer.TCPServer((self.host,self.port), MessageHandler)
-      log.debug('------runing thread------')
-      self.server.allow_reuse_address = True
-      self.server.serve_forever()
-      log.debug('[+] Listener Initialized.')
+      #log.debug('------runing thread------')
+      #self.server.allow_reuse_address = True
+      #self.server.serve_forever()
+      log.debug(' -----    Listener Initialized.     ------')
     except Exception as e:
-      log.error('[!] Failed to Initialize: '+str(e))
+      log.error('----- Failed to Initialize: '+str(e))
 
   def run(self):
     try:
       self.server.allow_reuse_address = True
       log.debug('----running thread-----') 
-      #self.server.server_bind()     
-      #self.server.server_activate() 
       self.server.serve_forever()
     except Exception as e:
       log.error('[!] Failed Run: '+str(e))
