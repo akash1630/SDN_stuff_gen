@@ -14,14 +14,13 @@ import numpy as np
 import scipy as sp
 
 from pox.openflow.of_json import *
-#import taint_db_impl
 
 log = core.getLogger()
-ip_port_dict_local = {}                                           #mapping for destination mac addr and egres port
-protected_resources = ["10.0.0.3"]                                #list of protected resources
-tainted_hosts = {}
-tainted_hosts_ports = {}
-suspected_hosts = []                                              #list of suspected hosts acting as pivots
+ip_port_dict_local = {}                  #mapping for destination mac addr and egres port
+protected_resources = ["10.0.0.3"]       #list of protected resources
+tainted_hosts = {}                       #dict: key - tainted hosts (ip addresses), val - timestamp
+tainted_hosts_ports = {}                 #dict: key - tainted hosts (ip addresses), val - ports list
+suspected_hosts = []                     #list of suspected hosts acting as pivots
 spawned_threads_send = {}
 spawned_threads_receive = {}
 mac_ip_map = {}
@@ -398,7 +397,6 @@ def _handle_ConnectionUp (event):
 def launch ():
   #Timer(50, prune_tainted_list, recurring = True)
   Timer(.5, taint_msg_listener, recurring = False)
-  #Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
@@ -444,9 +442,6 @@ class ListenThread(threading.Thread):
       self.host='0.0.0.0'
       self.port=port
       self.server = SocketServer.TCPServer((self.host,self.port), MessageHandler)
-      #log.debug('------runing thread------')
-      #self.server.allow_reuse_address = True
-      #self.server.serve_forever()
       log.debug(' -----    Listener Initialized.     ------')
     except Exception as e:
       log.error('----- Failed to Initialize: '+str(e))
@@ -454,14 +449,14 @@ class ListenThread(threading.Thread):
   def run(self):
     try:
       self.server.allow_reuse_address = True
-      log.debug('----running thread-----') 
+      log.debug('----running listener thread-----') 
       self.server.serve_forever()
     except Exception as e:
-      log.error('[!] Failed Run: '+str(e))
+      log.error('Error during Run: '+str(e))
 
   def end(self):
     try:
-      log.debug(RED+'[!] Shutting Down SocketServer')
+      log.debug(' ------  SocketServer shutting down now -------')
       self.server.shutdown()
     except Exception as e:
-      log.error('[!] Failed to Shutdown() Server: '+str(e))
+      log.error('Failed to Shutdown SocketServer: '+str(e))
