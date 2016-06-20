@@ -19,7 +19,7 @@ from pox.openflow.of_json import *
 #import taint_db_impl
 
 log = core.getLogger()
-mac_port_dict = {}                                          #mapping for destination mac addr and egres port
+ip_port_dict_local = {}                                          #mapping for destination mac addr and egres port
 protected_resources = ["10.0.0.3"]                          #list of protected resources
 tainted_hosts = {}
 tainted_hosts_ports = {}
@@ -258,7 +258,7 @@ def _handle_PacketIn (event):
 
   global forward_rule_set
   global backward_rule_set
-  global mac_port_dict
+  global ip_port_dict_local
   global protected_resources
   global tainted_hosts
   global mac_ip_map
@@ -404,7 +404,7 @@ class MessageHandler(SocketServer.StreamRequestHandler):
           		rtn_msg = 'ack,'+str(host_to_taint)+','+str(tainted_dest_port)+","+str(tainted_src_port)+'\n'
                 	self.wfile.write(rtn_msg)
                 	self.wfile.close()
-                	taint_action()
+                	taint_action(host_to_taint, tainted_dest_port)
 
       except Exception as e:
 	log.error('[!] Failed Handler: '+str(e))
