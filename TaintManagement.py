@@ -6,6 +6,7 @@ from pox.core import core
 import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 import socket
+import struct
 import threading
 #import psutil
 import SocketServer
@@ -34,6 +35,7 @@ check_for_stats_ctr = 1
 data_recvd_from_protected = {}
 prune_counter = 0
 samples = np.random.normal(250, 35, 1000)
+internal_ips = "10.0.0.0/24"
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
@@ -372,6 +374,14 @@ def taint_action(ip, port):
   #waiting_for_message.append(dest_eth_addr)
   t.start()
 
+def check_for_pivot(ip):
+  log.debug("------ Checking if pivot (tainted connection to external network) ----------")
+  ipaddr_to_check = struct.unpack('L',socket.inet_aton(ip))[0]
+  addr,mask_bits = internal_ips.split('/')
+  netmask = struct.unpack('L',socket.inet_aton(addr))[0] & ((2L<<int(mask_bits)-1) - 1)
+  return ipaddr_to_check & netmask == netmask
+
+
 def _handle_ConnectionUp (event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
 
@@ -405,7 +415,13 @@ class MessageHandler(SocketServer.StreamRequestHandler):
           		rtn_msg = 'ack,'+str(host_to_taint)+','+str(tainted_dest_port)+","+str(tainted_src_port)+'\n'
                 	self.wfile.write(rtn_msg)
                 	self.wfile.close()
-                	taint_action(host_to_taint, tainted_dest_port)
+                  pivot = 0
+                  pivot = check_for_pivot(host_to_taint)
+                  if(pivot):
+                    log.debug('######------------- Pivot Detected ---------------######')
+                  else:
+                    log.debug('------ tainted host sending tainted data to internal hosts ----------')
+                	  taint_action(host_to_taint, tainted_dest_port)
 
       except Exception as e:
 	log.error('[!] Failed Handler: '+str(e))
