@@ -91,6 +91,7 @@ def delete_flow_entries(host):
   log.debug("deleting flow table entries for " + str(host))
   msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
   #msg.priority = 65635
+  msg.match.dl_type = 0x800
   msg.match.nw_src = host
   for conn in core.openflow.connections:
     #log.debug("********* sending a flow removal message to switch : %s ", dpidToStr(conn.dpid))
@@ -367,7 +368,7 @@ def taint_action(ip, port):
   append_to_tainted_ports(ip, port)
   delete_flow_entries(ip)
   t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-  spawned_threads_send[eth_addr] = t
+  #spawned_threads_send[] = t
   #waiting_for_message.append(dest_eth_addr)
   t.start()
 
