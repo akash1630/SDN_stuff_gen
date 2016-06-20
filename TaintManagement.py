@@ -7,6 +7,7 @@ import pox.openflow.libopenflow_01 as of
 from pox.lib.util import dpidToStr
 import socket
 import struct
+import ipaddr
 import threading
 #import psutil
 import SocketServer
@@ -36,6 +37,7 @@ data_recvd_from_protected = {}
 prune_counter = 0
 samples = np.random.normal(250, 35, 1000)
 internal_ips = "10.0.0.0/24"
+internal_network = ipaddr.IPNetwork(internal_ips)
 
 #function to flood packets
 def flood_packet (event, dst_port = of.OFPP_ALL):
@@ -153,30 +155,33 @@ def prune_tainted_list():
 
 
 def send_message(ip, port):
-  log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
+  #log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   #host = str(ip)
   host = '172.16.229.128'
   port = 8888
   sock.settimeout(100)
+  #os.system('nc ')
   try:
     sock.connect((host,port))
-    #r=input('taint,' + host + ','+ str(port)) 
+    #r=input('taint, ' + host + ', '+ str(port)) 
+    #r = input('taint,172.16.229.128,1339,8080')
     r = "taint,172.16.229.128,1339,8080"
-    log.debug('##### sending taint message from ctrl: ' + r)
+    log.debug('##### sending taint message : ' + r)
     sock.sendall(r.encode())
     sock.shutdown(socket.SHUT_WR)
     data = ''
     waiting_for_ack = 1
-    while waiting_for_ack: 
+    while waiting_for_ack:
       data = sock.recv(4096).decode()
+      #log.debug('-----------reading data----------')
       #if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
       if(data.find('ack') >= 0):
-        log.debug(' ----- received ack!! ------' + data)
+        log.debug('-------received ack!! -------' + data)
         waiting_for_ack = 0
     sock.close()
   except:
-    #log.debug(" Host port denied connection")
+    log.debug(" Host port denied connection")
     sock.close()
 
 def listen_for_messages():
@@ -376,10 +381,9 @@ def taint_action(ip, port):
 
 def check_for_pivot(ip):
   log.debug("------ Checking if pivot (tainted connection to external network) ----------")
-  ipaddr_to_check = struct.unpack('L',socket.inet_aton(ip))[0]
-  addr,mask_bits = internal_ips.split('/')
-  netmask = struct.unpack('L',socket.inet_aton(addr))[0] & ((2L<<int(mask_bits)-1) - 1)
-  return ipaddr_to_check & netmask == netmask
+  ipaddr_to_check = ipaddr.IPAddress(ip)
+  is_external = not (internal_network.Contains(ipaddr_to_check))
+  return is_external
 
 
 def _handle_ConnectionUp (event):
@@ -415,13 +419,13 @@ class MessageHandler(SocketServer.StreamRequestHandler):
           		rtn_msg = 'ack,'+str(host_to_taint)+','+str(tainted_dest_port)+","+str(tainted_src_port)+'\n'
                 	self.wfile.write(rtn_msg)
                 	self.wfile.close()
-                  pivot = 0
-                  pivot = check_for_pivot(host_to_taint)
-                  if(pivot):
-                    log.debug('######------------- Pivot Detected ---------------######')
-                  else:
-                    log.debug('------ tainted host sending tainted data to internal hosts ----------')
-                	  taint_action(host_to_taint, tainted_dest_port)
+                  	pivot = False
+                  	pivot = check_for_pivot(host_to_taint)
+                  	if(pivot):
+                    		log.debug('######------------- Pivot Detected ---------------######')
+                  	else:
+                    		log.debug('------ tainted host sending tainted data to internal hosts ----------')
+                	  	taint_action(host_to_taint, tainted_dest_port)
 
       except Exception as e:
 	log.error('[!] Failed Handler: '+str(e))
