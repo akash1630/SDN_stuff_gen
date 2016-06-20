@@ -2,6 +2,7 @@ import socket
 import threading
 import SocketServer
 from pox.core import core
+from TaintManagement import taint_action
 
 log = core.getLogger()
 
@@ -14,15 +15,19 @@ class MessageHandler(SocketServer.StreamRequestHandler):
 	        host_msg = self.data.split(',')
 	        if ('taint' in host_msg[0].lower()):
 		        #rhost = ipaddr.IPAddress(host_msg[1])
-			tainted_host = host_msg[1]
-		        tainted_port = host_msg[2]
+			host_to_taint = host_msg[1]
+		        tainted_dest_port = host_msg[2]
+		        tainted_src_port = host_msg[3]
 
 			log.debug("[+] Rcvd Tainted Conn: "+str(self.data))
 
-			if ((tainted_host) and (int(tainted_port) > 0) and (int(tainted_port) < 65535)):
-				rtn_msg = 'ack,'+str(tainted_host)+','+str(tainted_port)+","'\n'
-			        self.wfile.write(rtn_msg)
-			        self.wfile.close()
+			if ((tainted_host) and (int(tainted_dest_port) > 0) and (int(tainted_dest_port) < 65535)):
+				if((int(tainted_src_port) > 0) and (int(tainted_src_port) < 65535)):
+					rtn_msg = 'ack,'+str(host_to_taint)+','+str(tainted_dest_port)+","+str(tainted_src_port)'\n'
+			        	self.wfile.write(rtn_msg)
+			        	self.wfile.close()
+			        	taint_action()
+
 	except Exception as e:
 		log.error('[!] Failed Handler: '+str(e))
 
