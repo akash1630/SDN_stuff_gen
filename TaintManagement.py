@@ -152,20 +152,24 @@ def prune_tainted_list():
 def send_message(ip, port):
   log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  host = str(ip)
-  port = 8080
+  #host = str(ip)
+  host = '172.16.229.128'
+  port = 8888
   sock.settimeout(100)
   try:
     sock.connect((host,port))
-    r=input('taint, ' + host + ', '+ str(port)) 
-    #log.debug('##### sending taint message : ' + 'taint, ' + host + ', '+ str(port))
-    sock.send(r.encode())
+    #r=input('taint,' + host + ','+ str(port)) 
+    r = "taint,172.16.229.128,1339,8080"
+    log.debug('##### sending taint message from ctrl: ' + r)
+    sock.sendall(r.encode())
+    sock.shutdown(socket.SHUT_WR)
     data = ''
     waiting_for_ack = 1
     while waiting_for_ack: 
-      data = sock.recv(1024).decode()
-      if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
-        print (data + '    received ack!!')
+      data = sock.recv(4096).decode()
+      #if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
+      if(data.find('ack') >= 0):
+        log.debug(' ----- received ack!! ------' + data)
         waiting_for_ack = 0
     sock.close()
   except:
