@@ -376,13 +376,13 @@ def _handle_ConnectionUp (event):
 
 def launch ():
   #Timer(50, prune_tainted_list, recurring = True)
-  Timer(1, taint_msg_listener, recurring = False)
+  #Timer(1, taint_msg_listener, recurring = False)
   #Timer(300, delete_flows_for_watermark_detection, recurring = True)
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
-  #thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
-  #thr.start()
+  thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
+  thr.start()
 
 class MessageHandler(SocketServer.StreamRequestHandler):
     def handle(self):
