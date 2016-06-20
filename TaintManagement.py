@@ -429,7 +429,7 @@ class MessageHandler(SocketServer.StreamRequestHandler):
                   	pivot = check_for_pivot(host_to_taint)
                   	if(pivot):
                     		log.debug('######------------- Pivot Detected : Deciding action---------------######')
-                        decide_action_pivot()
+                        	decide_action_pivot()
                   	else:
                     		log.debug('------ tainted host sending tainted data to internal hosts ----------')
                 	  	taint_action(host_to_taint, tainted_dest_port)
