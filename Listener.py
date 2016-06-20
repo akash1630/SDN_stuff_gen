@@ -23,7 +23,7 @@ class MessageHandler(SocketServer.StreamRequestHandler):
 
 			if ((tainted_host) and (int(tainted_dest_port) > 0) and (int(tainted_dest_port) < 65535)):
 				if((int(tainted_src_port) > 0) and (int(tainted_src_port) < 65535)):
-					rtn_msg = 'ack,'+str(host_to_taint)+','+str(tainted_dest_port)+","+str(tainted_src_port)'\n'
+					rtn_msg = 'ack,'+str(host_to_taint)+','+str(tainted_dest_port)+","+str(tainted_src_port)+'\n'
 			        	self.wfile.write(rtn_msg)
 			        	self.wfile.close()
 			        	taint_action()
