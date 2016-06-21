@@ -409,9 +409,10 @@ def launch ():
 class MessageHandler(SocketServer.StreamRequestHandler):
     def handle(self):
       try:
-        log.debug("----- Receiving message from : " + self.client_address +" ------")
+        log.debug("----- Receiving message from : " + str(self.client_address[0]) +" ------")
     	self.data = self.request.recv(1024).strip()
     	log.debug("received message : " + self.data)
+	client_addr = str(self.client_address[0])
         host_msg = self.data.split(',')
         if ('taint' in host_msg[0].lower()):
             #rhost = ipaddr.IPAddress(host_msg[1])
@@ -429,8 +430,8 @@ class MessageHandler(SocketServer.StreamRequestHandler):
                   	pivot = False
                   	pivot = check_for_pivot(host_to_taint)
                   	if(pivot):
-                    		log.debug('######---- Pivot Detected : '+ self.client_address + ' - check action---------------######')
-                        	decide_action_pivot(self.client_address)
+                    		log.debug('######---- Pivot Detected : '+ client_addr + ' - check action---------------######')
+                        	decide_action_pivot(client_addr)
                   	else:
                     		log.debug('------ tainted host sending tainted data to internal hosts ----------')
                 	  	taint_action(host_to_taint, tainted_dest_port)
