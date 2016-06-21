@@ -380,7 +380,7 @@ def check_for_pivot(ip):
 
 
 #############################################################################
-#function to decde the action to be performed after pivot detection
+#function to decide the action to be performed after pivot detection
 #############################################################################
 def decide_action_pivot(client_address):
   log.debug("*** Developer machine - Isolating " + client_address)
