@@ -36,7 +36,9 @@ samples = np.random.normal(250, 35, 1000)
 #define internal network here - ****IMPORTANT****
 #############################################################################
 internal_ips = "10.0.0.0/24"
+developer_machines_ips = "10.0.0.0/28"
 internal_network = ipaddr.IPNetwork(internal_ips)
+developer_mcahines_network = ipaddr.IPNetwork(developer_machines_ips)
 
 
 #############################################################################
@@ -380,8 +382,9 @@ def check_for_pivot(ip):
 #############################################################################
 #function to decde the action to be performed after pivot detection
 #############################################################################
-def decide_action_pivot():
-  pass
+def decide_action_pivot(client_address):
+  log.debug("*** Developer machine - Isolating " + client_address)
+  #pass
 
 
 #############################################################################
@@ -406,7 +409,7 @@ def launch ():
 class MessageHandler(SocketServer.StreamRequestHandler):
     def handle(self):
       try:
-        log.debug("----- handling message ------")
+        log.debug("----- Receiving message from : " + self.client_address +" ------")
     	self.data = self.request.recv(1024).strip()
     	log.debug("received message : " + self.data)
         host_msg = self.data.split(',')
@@ -426,8 +429,8 @@ class MessageHandler(SocketServer.StreamRequestHandler):
                   	pivot = False
                   	pivot = check_for_pivot(host_to_taint)
                   	if(pivot):
-                    		log.debug('######------------- Pivot Detected : Deciding action---------------######')
-                        	decide_action_pivot()
+                    		log.debug('######---- Pivot Detected : '+ self.client_address + ' - check action---------------######')
+                        	decide_action_pivot(self.client_address)
                   	else:
                     		log.debug('------ tainted host sending tainted data to internal hosts ----------')
                 	  	taint_action(host_to_taint, tainted_dest_port)
