@@ -17,7 +17,6 @@ from pox.openflow.of_json import *
 
 log = core.getLogger()
 ip_port_dict_local = {}                  #mapping for destination mac addr and egres port
-protected_resources = ["10.0.0.3"]       #list of protected resources
 tainted_hosts = {}                       #dict: key - tainted hosts (ip addresses), val - timestamp
 tainted_hosts_ports = {}                 #dict: key - tainted hosts (ip addresses), val - ports list
 suspected_hosts = []                     #list of suspected hosts acting as pivots
@@ -36,9 +35,12 @@ samples = np.random.normal(250, 35, 1000)
 #define internal network here - ****IMPORTANT****
 #############################################################################
 internal_ips = "10.0.0.0/24"
-developer_machines_ips = "10.0.0.0/28"
 internal_network = ipaddr.IPNetwork(internal_ips)
+developer_machines_ips = "10.0.0.0/28"
 developer_mcahines_network = ipaddr.IPNetwork(developer_machines_ips)
+hosts_without_agent = "10.0.1.0/24"
+network_hosts_without_agent = ipaddr.IPNetwork(hosts_without_agent)
+protected_resources = ["10.0.0.3"]       #list of protected resources
 
 
 #############################################################################
@@ -271,8 +273,6 @@ def _handle_PacketIn (event):
   global mac_ip_map
   skip_add_to_dict_dest = 0
   skip_add_to_dict_src = 0
-  mu_sigma_vals = [0,0]
-  is_correlated = 0
   is_tcp_ack = 0
   srcport = 0
   dstport = 0
@@ -286,11 +286,6 @@ def _handle_PacketIn (event):
   key = src_eth_addr + '-' + dest_eth_addr
   srcip = ''
   dstip = ''
-
-  if src_eth_addr in suspected_hosts:
-    delete_flow_entries(packet.src)
-    drop_packet(event)
-    return
 
   ipv4_pack = packet.find("ipv4")
   if ipv4_pack:
@@ -313,26 +308,35 @@ def _handle_PacketIn (event):
       #mac_port_dict[packet.src] = event.port
       is_tcp_ack = 1
 
+  if srcip in suspected_hosts:
+    delete_flow_entries(srcip)
+    drop_packet(event)
+    return
+
 
   #log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
   is_tcp_ack = 0
+  
   if is_tcp_ack == 0:
     if (srcip in protected_resources):
       if(dstip in protected_resources):
         log.debug("protected to protected communication")
         skip_add_to_dict_dest = 0
       else:
-        log.debug(" __________ Traffic from protected resource to normal host __________ ")
+        log.debug(" __________ Traffic from protected resource to internal host __________ ")
         taint_action(dstip, dstport)
 
     elif(tainted_hosts.has_key(srcip) and (dstip not in protected_resources)):
-      log.debug("-------- Traffic coming from tainted host --------")
-      if(tainted_hosts_ports.has_key(srcip)):
-        if(srcport in tainted_hosts_ports[srcip]):
-          log.debug("-------- traffic coming from a tainted port on a tainted host --------")
-          taint_action(dstip, dstport)
-        else:
-          log.debug("------ CLean traffic from a tainted host---------- ")
+      if(network_hosts_without_agent.Contains(ipaddr.IPAddress(srcip))):
+        log.debug("-------- Traffic coming from tainted host without agent --------")
+        taint_action(dstip, dstport)
+      else:
+        if(tainted_hosts_ports.has_key(srcip)):
+          if(srcport in tainted_hosts_ports[srcip]):
+            log.debug("-------- traffic coming from a tainted port on a tainted host --------")
+            taint_action(dstip, dstport)
+          else:
+            log.debug("------ Clean traffic from a tainted host---------- ")
 
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
@@ -360,13 +364,17 @@ def _handle_PacketIn (event):
 #############################################################################
 def taint_action(ip, port):
   log.debug("<<<<<<<  Performing taint actions >>>>>>>>>>")
+  if(network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip))):
+    log.debug("### Host does not have an agent running - taint the whole host   ###")
+    port = -1
   add_to_tainted_hosts(ip)
   append_to_tainted_ports(ip, port)
   delete_flow_entries(ip)
-  t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-  #spawned_threads_send[] = t
-  #waiting_for_message.append(dest_eth_addr)
-  t.start()
+  if(port > 0):
+    t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+    #spawned_threads_send[] = t
+    #waiting_for_message.append(dest_eth_addr)
+    t.start()
 
 
 #############################################################################
