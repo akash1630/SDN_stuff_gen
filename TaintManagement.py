@@ -101,12 +101,12 @@ def add_to_tainted_hosts(host):
 def append_to_tainted_ports(host, port):
   global tainted_hosts_ports
   log.debug('Appending a new tainted port')
-  #if port > 0:
-  if tainted_hosts_ports.has_key(host):
-    if port not in tainted_hosts_ports[host]:
-      tainted_hosts_ports[host].append(port)
-  else:
-    tainted_hosts_ports[host] = [port]
+  if port > 0:
+    if tainted_hosts_ports.has_key(host):
+      if port not in tainted_hosts_ports[host]:
+        tainted_hosts_ports[host].append(port)
+    else:
+      tainted_hosts_ports[host] = [port]
   pprint.pprint(tainted_hosts_ports)
 
 
@@ -372,11 +372,11 @@ def taint_action(ip, port):
   add_to_tainted_hosts(ip)
   append_to_tainted_ports(ip, port)
   delete_flow_entries(ip)
-  t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-  t.start()
-  #if(port > 0):
-    #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-    #t.start()
+  #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+  #t.start()
+  if(port > 0):
+    t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+    t.start()
     #spawned_threads_send[] = t
     #waiting_for_message.append(dest_eth_addr)
 
