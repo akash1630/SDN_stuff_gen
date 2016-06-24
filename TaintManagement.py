@@ -36,9 +36,11 @@ samples = np.random.normal(250, 35, 1000)
 #############################################################################
 internal_ips = "10.0.0.0/24"
 internal_network = ipaddr.IPNetwork(internal_ips)
-developer_machines_ips = "10.0.0.0/28"
-developer_mcahines_network = ipaddr.IPNetwork(developer_machines_ips)
-hosts_without_agent = "10.0.1.0/24"
+restrict_if_pivot_ips = "10.0.0.0/28"
+restrict_if_pivot_network = ipaddr.IPNetwork(restrict_if_pivot_ips)
+throttle_outbound_if_pivot_ips = "10.0.0.129/28"
+throttle_outbound_if_pivot_network = ipaddr.IPNetwork(throttle_outbound_if_pivot_ips)
+hosts_without_agent = "10.0.0.5/32"
 network_hosts_without_agent = ipaddr.IPNetwork(hosts_without_agent)
 protected_resources = ["10.0.0.3"]       #list of protected resources
 
@@ -99,12 +101,12 @@ def add_to_tainted_hosts(host):
 def append_to_tainted_ports(host, port):
   global tainted_hosts_ports
   log.debug('Appending a new tainted port')
-  if port > 0:
-    if tainted_hosts_ports.has_key(host):
-      if port not in tainted_hosts_ports[host]:
-        tainted_hosts_ports[host].append(port)
-    else:
-      tainted_hosts_ports[host] = [port]
+  #if port > 0:
+  if tainted_hosts_ports.has_key(host):
+    if port not in tainted_hosts_ports[host]:
+      tainted_hosts_ports[host].append(port)
+  else:
+    tainted_hosts_ports[host] = [port]
   pprint.pprint(tainted_hosts_ports)
 
 
@@ -181,30 +183,30 @@ def send_message(ip, port):
   #log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   #host = str(ip)
-  host = '172.16.229.128'
+  host = '172.16.229.133'
   port = 8888
-  sock.settimeout(100)
+  sock.settimeout(50)
   #os.system('nc ')
   try:
     sock.connect((host,port))
     #r=input('taint, ' + host + ', '+ str(port)) 
     #r = input('taint,172.16.229.128,1339,8080')
-    r = "taint,172.16.229.128,1339,8080"
+    r = "taint,172.16.229.133,1339,8080"
     log.debug('##### sending taint message : ' + r)
     sock.sendall(r.encode())
     sock.shutdown(socket.SHUT_WR)
     data = ''
-    waiting_for_ack = 1
+    waiting_for_ack = True
     while waiting_for_ack:
       data = sock.recv(4096).decode()
       #log.debug('-----------reading data----------')
       #if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
       if(data.find('ack') >= 0):
         log.debug('-------received ack!! -------' + data)
-        waiting_for_ack = 0
+        waiting_for_ack = False
     sock.close()
-  except:
-    log.debug(" Host port denied connection")
+  except Exception as e:
+    log.debug(" Host port denied connection: " + str(e))
     sock.close()
 
 
@@ -363,18 +365,20 @@ def _handle_PacketIn (event):
 #function to perform the taint operations
 #############################################################################
 def taint_action(ip, port):
-  log.debug("<<<<<<<  Performing taint actions >>>>>>>>>>")
-  if(network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip))):
+  log.debug("<<<<<<<  Performing taint actions ip : "+ip + "  port :"+ str(port) +" >>>>>>>>>>")
+  if(network_hosts_without_agent.Contains(ipaddr.IPAddress(ip))):
     log.debug("### Host does not have an agent running - taint the whole host   ###")
     port = -1
   add_to_tainted_hosts(ip)
   append_to_tainted_ports(ip, port)
   delete_flow_entries(ip)
-  if(port > 0):
-    t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+  t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+  t.start()
+  #if(port > 0):
+    #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+    #t.start()
     #spawned_threads_send[] = t
     #waiting_for_message.append(dest_eth_addr)
-    t.start()
 
 
 #############################################################################
@@ -391,8 +395,25 @@ def check_for_pivot(ip):
 #function to decide the action to be performed after pivot detection
 #############################################################################
 def decide_action_pivot(client_address):
-  log.debug("*** Developer machine - Isolating " + client_address)
-  #pass
+  action = "restrict"
+  ip = ipaddr.IPAddress(client_address)
+  if(restrict_if_pivot_network.Contains(ip)):
+    return "restrict"
+  elif(throttle_outbound_if_pivot_network.Contains(ip)):
+    return "throttle"
+  #log.debug("*** Developer machine - Isolating " + client_address)
+  return action
+
+
+#############################################################################
+#function to take the decided counter measure against detected  pivot
+#############################################################################
+def take_counter_action(action):
+  log.debug("###### Action decided for pivot : " + action)
+  if(action == "restrict"):
+    pass
+  elif(action == "throttle"):
+    pass
 
 
 #############################################################################
@@ -439,7 +460,8 @@ class MessageHandler(SocketServer.StreamRequestHandler):
                   	pivot = check_for_pivot(host_to_taint)
                   	if(pivot):
                     		log.debug('######---- Pivot Detected : '+ client_addr + ' - check action---------------######')
-                        	decide_action_pivot(client_addr)
+                        	action = decide_action_pivot(client_addr)
+				take_counter_action(action)
                   	else:
                     		log.debug('------ tainted host sending tainted data to internal hosts ----------')
                 	  	taint_action(host_to_taint, tainted_dest_port)
