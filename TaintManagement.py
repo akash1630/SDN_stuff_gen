@@ -31,18 +31,22 @@ data_recvd_from_protected = {}
 prune_counter = 0
 samples = np.random.normal(250, 35, 1000)
 
+temp_map = {}
+temp_map['169.254.7.2']='192.168.56.101'
+temp_map['169.254.4.222']='192.168.56.102'
+
 #############################################################################
 #define internal network here - ****IMPORTANT****
 #############################################################################
-internal_ips = "10.0.0.0/24"
+internal_ips = "169.254.0.0/16"
 internal_network = ipaddr.IPNetwork(internal_ips)
-restrict_if_pivot_ips = "10.0.0.0/28"
+restrict_if_pivot_ips = "169.254.4.0/24"
 restrict_if_pivot_network = ipaddr.IPNetwork(restrict_if_pivot_ips)
-throttle_outbound_if_pivot_ips = "10.0.0.129/28"
+throttle_outbound_if_pivot_ips = "169.254.7.0/24"
 throttle_outbound_if_pivot_network = ipaddr.IPNetwork(throttle_outbound_if_pivot_ips)
 hosts_without_agent = "10.0.0.5/32"
 network_hosts_without_agent = ipaddr.IPNetwork(hosts_without_agent)
-protected_resources = ["10.0.0.3"]       #list of protected resources
+protected_resources = ["169.254.7.2"]       #list of protected resources
 
 
 #############################################################################
@@ -101,12 +105,12 @@ def add_to_tainted_hosts(host):
 def append_to_tainted_ports(host, port):
   global tainted_hosts_ports
   log.debug('Appending a new tainted port')
-  if port > 0:
-    if tainted_hosts_ports.has_key(host):
-      if port not in tainted_hosts_ports[host]:
-        tainted_hosts_ports[host].append(port)
-    else:
-      tainted_hosts_ports[host] = [port]
+  #if port > 0:
+  if tainted_hosts_ports.has_key(host):
+    if port not in tainted_hosts_ports[host]:
+      tainted_hosts_ports[host].append(port)
+  else:
+    tainted_hosts_ports[host] = [port]
   pprint.pprint(tainted_hosts_ports)
 
 
@@ -180,18 +184,19 @@ def prune_tainted_list():
 #function to send taint message to hosts
 ##############################################################################
 def send_message(ip, port):
-  #log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
+  log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  #host = str(ip)
-  host = '172.16.229.133'
-  port = 8888
+  host = temp_map.get(ip)
+  log.debug("@@@@@@@@@@@@@@@@@@@   host being contacted : " + ip)
+  #host = '172.16.229.133'
+  #port = 8888
   sock.settimeout(50)
   #os.system('nc ')
   try:
     sock.connect((host,port))
     #r=input('taint, ' + host + ', '+ str(port)) 
     #r = input('taint,172.16.229.128,1339,8080')
-    r = "taint,172.16.229.133,1339,8080"
+    r = "taint,"+host+","+str(port)+",8080"
     log.debug('##### sending taint message : ' + r)
     sock.sendall(r.encode())
     sock.shutdown(socket.SHUT_WR)
@@ -342,14 +347,14 @@ def _handle_PacketIn (event):
 
 
   if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
-    log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+    #log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     ip_port_dict_local[srcip] = event.port
     if dstip not in ip_port_dict_local:
-      log.debug("flooding to all ports as no entry in dictionary")
+      #log.debug("flooding to all ports as no entry in dictionary")
       flood_packet(event, of.OFPP_ALL)
     else:
       port = ip_port_dict_local[dstip]
-      log.debug("setting a flow table entry as matching entry found in dict - " + srcip + "    " + dstip)
+      #log.debug("setting a flow table entry as matching entry found in dict - " + srcip + "    " + dstip)
       msg = of.ofp_flow_mod()
       msg.match = of.ofp_match.from_packet(packet, event.port)
       msg.priority = 1009
@@ -372,11 +377,11 @@ def taint_action(ip, port):
   add_to_tainted_hosts(ip)
   append_to_tainted_ports(ip, port)
   delete_flow_entries(ip)
-  #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-  #t.start()
-  if(port > 0):
-    t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-    t.start()
+  t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+  t.start()
+  #if(port > 0):
+    #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+    #t.start()
     #spawned_threads_send[] = t
     #waiting_for_message.append(dest_eth_addr)
 
