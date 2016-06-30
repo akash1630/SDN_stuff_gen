@@ -31,9 +31,14 @@ data_recvd_from_protected = {}
 prune_counter = 0
 samples = np.random.normal(250, 35, 1000)
 
+############################################################################
+#    **** FOR TESTING PURPOSES ****
+############################################################################
+
 temp_map = {}
 temp_map['169.254.7.2']='192.168.56.101'
 temp_map['169.254.4.222']='192.168.56.102'
+temp_map['169.254.5.1'] = '192.168.56.104'
 
 #############################################################################
 #define internal network here - ****IMPORTANT****
@@ -184,10 +189,13 @@ def prune_tainted_list():
 #function to send taint message to hosts
 ##############################################################################
 def send_message(ip, port):
-  log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
+  #log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  host = temp_map.get(ip)
-  log.debug("@@@@@@@@@@@@@@@@@@@   host being contacted : " + ip)
+  if(temp_map.has_key(ip)):
+    host = temp_map.get(ip)
+  else:
+    host = ip
+  log.debug("@@@@@@@@@@@@@@@@@@@   host being contacted : " + ip + " at : " +host)
   #host = '172.16.229.133'
   #port = 8888
   sock.settimeout(50)
