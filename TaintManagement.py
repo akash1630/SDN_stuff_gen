@@ -110,12 +110,12 @@ def add_to_tainted_hosts(host):
 def append_to_tainted_ports(host, port):
   global tainted_hosts_ports
   log.debug('Appending a new tainted port')
-  #if port > 0:
-  if tainted_hosts_ports.has_key(host):
-    if port not in tainted_hosts_ports[host]:
-      tainted_hosts_ports[host].append(port)
-  else:
-    tainted_hosts_ports[host] = [port]
+  if port > 0:
+    if tainted_hosts_ports.has_key(host):
+      if port not in tainted_hosts_ports[host]:
+        tainted_hosts_ports[host].append(port)
+    else:
+      tainted_hosts_ports[host] = [port]
   pprint.pprint(tainted_hosts_ports)
 
 
@@ -188,7 +188,7 @@ def prune_tainted_list():
 ##############################################################################
 #function to send taint message to hosts
 ##############################################################################
-def send_message(ip, port):
+def send_message(ip, tainted_port):
   #log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   if(temp_map.has_key(ip)):
@@ -197,14 +197,14 @@ def send_message(ip, port):
     host = ip
   log.debug("@@@@@@@@@@@@@@@@@@@   host being contacted : " + ip + " at : " +host)
   #host = '172.16.229.133'
-  #port = 8888
+  port = 8888
   sock.settimeout(50)
   #os.system('nc ')
   try:
     sock.connect((host,port))
     #r=input('taint, ' + host + ', '+ str(port)) 
     #r = input('taint,172.16.229.128,1339,8080')
-    r = "taint,"+host+","+str(port)+",8080"
+    r = "taint,"+ip+","+str(tainted_port)+",8080"
     log.debug('##### sending taint message : ' + r)
     sock.sendall(r.encode())
     sock.shutdown(socket.SHUT_WR)
@@ -358,11 +358,11 @@ def _handle_PacketIn (event):
     #log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
     ip_port_dict_local[srcip] = event.port
     if dstip not in ip_port_dict_local:
-      #log.debug("flooding to all ports as no entry in dictionary")
+      #log.debug("flooding to all ports as no entry in dictionary" + srcip + "->" + dstip)
       flood_packet(event, of.OFPP_ALL)
     else:
       port = ip_port_dict_local[dstip]
-      #log.debug("setting a flow table entry as matching entry found in dict - " + srcip + "    " + dstip)
+      #log.debug("setting a flow table entry as matching entry found in dict - " + srcip + " ->  " + dstip)
       msg = of.ofp_flow_mod()
       msg.match = of.ofp_match.from_packet(packet, event.port)
       msg.priority = 1009
@@ -378,6 +378,9 @@ def _handle_PacketIn (event):
 #function to perform the taint operations
 #############################################################################
 def taint_action(ip, port):
+  if ip in protected_resources:
+    log.debug(" ------ Host to be tainted is a protected resource. No Action. Returning. --------------")
+    return
   log.debug("<<<<<<<  Performing taint actions ip : "+ip + "  port :"+ str(port) +" >>>>>>>>>>")
   if(network_hosts_without_agent.Contains(ipaddr.IPAddress(ip))):
     log.debug("### Host does not have an agent running - taint the whole host   ###")
@@ -385,11 +388,11 @@ def taint_action(ip, port):
   add_to_tainted_hosts(ip)
   append_to_tainted_ports(ip, port)
   delete_flow_entries(ip)
-  t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-  t.start()
-  #if(port > 0):
-    #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-    #t.start()
+  #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+  #t.start()
+  if(port > 0):
+    t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
+    t.start()
     #spawned_threads_send[] = t
     #waiting_for_message.append(dest_eth_addr)
 
