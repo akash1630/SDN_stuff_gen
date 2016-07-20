@@ -36,22 +36,22 @@ samples = np.random.normal(250, 35, 1000)
 ############################################################################
 
 temp_map = {}
-temp_map['10.4.4.2']='192.168.158.192'
-temp_map['10.4.4.3']='192.168.158.193'
-temp_map['10.4.4.4'] ='192.168.158.194'
+temp_map['169.254.7.2']='192.168.56.101'
+temp_map['169.254.4.222']='192.168.56.102'
+temp_map['169.254.5.1'] = '192.168.56.104'
 
 #############################################################################
 #define internal network here - ****IMPORTANT****
 #############################################################################
-internal_ips = "10.4.4.0/24"
+internal_ips = "169.254.0.0/16"
 internal_network = ipaddr.IPNetwork(internal_ips)
-restrict_if_pivot_ips = "10.4.4.0/24"
+restrict_if_pivot_ips = "169.254.4.0/24"
 restrict_if_pivot_network = ipaddr.IPNetwork(restrict_if_pivot_ips)
-throttle_outbound_if_pivot_ips = "10.4.4.0/24"
+throttle_outbound_if_pivot_ips = "169.254.7.0/24"
 throttle_outbound_if_pivot_network = ipaddr.IPNetwork(throttle_outbound_if_pivot_ips)
-hosts_without_agent = "10.4.4.5/32"
+hosts_without_agent = "10.0.0.5/32"
 network_hosts_without_agent = ipaddr.IPNetwork(hosts_without_agent)
-protected_resources = ["10.4.4.4"]       #list of protected resources
+protected_resources = ["169.254.7.2"]       #list of protected resources
 
 
 #############################################################################
@@ -59,16 +59,17 @@ protected_resources = ["10.4.4.4"]       #list of protected resources
 #############################################################################
 def flood_packet (event, dst_port = of.OFPP_ALL):
   msg = of.ofp_packet_out(in_port=event.ofp.in_port)
-  #log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id))
+  log.debug("flooding packet for buffer_id " + str(event.ofp.buffer_id)+ "  in port : "+ str(event.ofp.in_port))
   if event.ofp.buffer_id != -1 and event.ofp.buffer_id is not None:
     msg.buffer_id = event.ofp.buffer_id
   else:
     if event.ofp.data:
       return
-    msg.data = event.ofp.data
-
-  msg.actions.append(of.ofp_action_output(port = dst_port))
+  msg.data = event.ofp
+  #msg.in_port = event.port
+  msg.actions.append(of.ofp_action_output(port = of.OFPP_ALL))
   event.connection.send(msg)
+  log.debug("flooding complete")
 
 
 ##############################################################################
@@ -316,7 +317,7 @@ def _handle_PacketIn (event):
 
   tcp = packet.find("tcp")
   if tcp:
-    #log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
+    log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
     srcport = tcp.srcport
     dstport = tcp.dstport
     if tcp.ACK:
@@ -326,7 +327,8 @@ def _handle_PacketIn (event):
 
   icmp = packet.find("icmp")
   if icmp:
-  	is_icmp_pack = 1
+    log.debug(" ICMP packet in tramsit !! ")
+    is_icmp_pack = 1
 
   if srcip in suspected_hosts:
     delete_flow_entries(srcip)
@@ -334,10 +336,23 @@ def _handle_PacketIn (event):
     return
 
 
+  def flood (message = None):
+    msg = of.ofp_packet_out()
+    if message is not None: log.debug(message)
+    log.debug("%i: flood %s -> %s", event.dpid,packet.src,packet.dst)
+    # OFPP_FLOOD is optional; on some switches you may need to change
+    # this to OFPP_ALL.
+    msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
+    msg.data = event.ofp
+    msg.in_port = event.port
+    event.connection.send(msg)
+
+
+
   #log.debug("packet forwarding  " + src_eth_addr + "  " + dest_eth_addr)
   is_tcp_ack = 0
   
-  if (is_tcp_ack == 0 and is_icmp_pack ==0):
+  if (is_tcp_ack == 0 and is_icmp_pack == 0):
     if (srcip in protected_resources):
       if(dstip in protected_resources):
         log.debug("protected to protected communication")
@@ -359,15 +374,18 @@ def _handle_PacketIn (event):
             log.debug("------ Clean traffic from a tainted host---------- ")
 
 
-  if (skip_add_to_dict_dest == 0) and (skip_add_to_dict_src == 0):
-    #log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
-    ip_port_dict_local[srcip] = event.port
+  if (skip_add_to_dict_dest == 0 and skip_add_to_dict_src == 0):
+    if (srcip != "" and srcip != ''):
+      log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
+      ip_port_dict_local[srcip] = event.port
+      pprint.pprint(ip_port_dict_local)
     if dstip not in ip_port_dict_local:
-      #log.debug("flooding to all ports as no entry in dictionary" + srcip + "->" + dstip)
-      flood_packet(event, of.OFPP_ALL)
+      log.debug("flooding to all ports as no entry in dictionary" + srcip + "->" + dstip)
+      flood()
+      #flood_packet(event, of.OFPP_ALL)
     else:
       port = ip_port_dict_local[dstip]
-      #log.debug("setting a flow table entry as matching entry found in dict - " + srcip + " ->  " + dstip)
+      log.debug("setting a flow table entry as matching entry found in dict - " + srcip + ":" + str(srcport) + " ->  " + dstip + ":" + str(dstport))
       msg = of.ofp_flow_mod()
       msg.match = of.ofp_match.from_packet(packet, event.port)
       msg.priority = 1009
@@ -386,9 +404,9 @@ def taint_action(ip, port):
   if ip in protected_resources:
     log.debug(" ------ Host to be tainted is a protected resource. No Action. Returning. --------------")
     return
-  if(port < 1 or port > 65534):
-  	log.debug("----- Either ICMP packet or port not valid. No Action. Returning. ------------ ")
-  	return
+  if (port < 1 and port > 65535):
+    log.debug("------- either ICMP packet or port number issue. No Action. Returning. ------------")
+    return
   log.debug("<<<<<<<  Performing taint actions ip : "+ip + "  port :"+ str(port) +" >>>>>>>>>>")
   if(network_hosts_without_agent.Contains(ipaddr.IPAddress(ip))):
     log.debug("### Host does not have an agent running - taint the whole host   ###")
