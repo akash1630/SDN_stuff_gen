@@ -382,14 +382,14 @@ def _handle_PacketIn (event):
     if dstip not in ip_port_dict_local:
       if(taint_notif_ack_recv.has_key(dstip+str(dstport))):
         while(taint_notif_ack_recv[dstip + str(dstport)] == 0):
-          time.sleep(0.1)
+          time.sleep(0.02)
       log.debug("flooding to all ports as no entry in dictionary" + srcip + "->" + dstip)
       flood()
       #flood_packet(event, of.OFPP_ALL)
     else:
       if(taint_notif_ack_recv.has_key(dstip+str(dstport))):
         while(taint_notif_ack_recv[dstip + str(dstport)] == 0):
-          time.sleep(0.1)
+          time.sleep(0.02)
       port = ip_port_dict_local[dstip]
       log.debug("setting a flow table entry as matching entry found in dict - " + srcip + ":" + str(srcport) + " ->  " + dstip + ":" + str(dstport))
       msg = of.ofp_flow_mod()
@@ -420,7 +420,7 @@ def taint_action(dstip, dstport, srcip, srcport):
     dstport = -1
   add_to_tainted_hosts(dstip)
   append_to_tainted_ports(dstip, int(dstport))
-  if(not taint_notif_ack_recv.has_key(dstip + str(dstport))):
+  if(not network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip)) and not taint_notif_ack_recv.has_key(dstip + str(dstport))):
     taint_notif_ack_recv[dstip + str(dstport)] = 0
   if(dstport not in tainted_hosts_ports[dstip]):
     delete_flow_entries(dstip)
