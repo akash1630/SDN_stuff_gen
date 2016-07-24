@@ -22,6 +22,7 @@ tainted_hosts_ports = {}                 #dict: key - tainted hosts (ip addresse
 suspected_hosts = []                     #list of suspected hosts acting as pivots
 spawned_threads_send = {}
 spawned_threads_receive = {}
+taint_notif_ack_recv = {}
 mac_ip_map = {}
 ip_mac_map = {}
 waiting_for_message = []
@@ -36,22 +37,22 @@ samples = np.random.normal(250, 35, 1000)
 ############################################################################
 
 temp_map = {}
-temp_map['10.4.4.2']='192.168.158.192'
-temp_map['10.4.4.3']='192.168.158.193'
-temp_map['10.4.4.4'] ='192.168.158.194'
+temp_map['169.254.41.7']='192.168.56.101'
+temp_map['169.254.4.222']='192.168.56.102'
+temp_map['169.254.7.255'] = '192.168.56.103'
 
 #############################################################################
 #define internal network here - ****IMPORTANT****
 #############################################################################
-internal_ips = "10.4.4.0/24"
+internal_ips = "169.254.0.0/16"
 internal_network = ipaddr.IPNetwork(internal_ips)
-restrict_if_pivot_ips = "10.4.4.0/24"
+restrict_if_pivot_ips = "169.254.4.0/24"
 restrict_if_pivot_network = ipaddr.IPNetwork(restrict_if_pivot_ips)
-throttle_outbound_if_pivot_ips = "10.4.4.0/24"
+throttle_outbound_if_pivot_ips = "169.254.7.0/24"
 throttle_outbound_if_pivot_network = ipaddr.IPNetwork(throttle_outbound_if_pivot_ips)
-hosts_without_agent = "10.4.4.5/32"
+hosts_without_agent = "10.0.0.5/32"
 network_hosts_without_agent = ipaddr.IPNetwork(hosts_without_agent)
-protected_resources = ["10.4.4.4"]       #list of protected resources
+protected_resources = ["169.254.7.255"]       #list of protected resources
 
 
 #############################################################################
@@ -188,14 +189,14 @@ def prune_tainted_list():
 ##############################################################################
 #function to send taint message to hosts
 ##############################################################################
-def send_message(ip, tainted_port):
+def send_message(ip_taint_msg, local_tainted_port, remote_ip, remote_port):
   #log.debug('##### sending taint message : ' + 'taint, ' + str(ip) + ', '+ str(port))
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  if(temp_map.has_key(ip)):
-    host = temp_map.get(ip)
+  if(temp_map.has_key(ip_taint_msg)):
+    host = temp_map.get(ip_taint_msg)
   else:
-    host = ip
-  log.debug("@@@@@@@@@@@@@@@@@@@   host being contacted : " + ip + " at : " +host)
+    host = ip_taint_msg
+  log.debug("@@@@@@@@@@@@@@@@@@@   host being contacted : " + ip_taint_msg + " at : " +host)
   #host = '172.16.229.133'
   port = 8888
   sock.settimeout(50)
@@ -204,7 +205,7 @@ def send_message(ip, tainted_port):
     sock.connect((host,port))
     #r=input('taint, ' + host + ', '+ str(port)) 
     #r = input('taint,172.16.229.128,1339,8080')
-    r = "taint,"+ip+","+str(tainted_port)+",8080"
+    r = "taint,"+remote_ip+","+str(remote_port)+","+str(local_tainted_port)
     log.debug('##### sending taint message : ' + r)
     sock.sendall(r.encode())
     sock.shutdown(socket.SHUT_WR)
@@ -216,6 +217,7 @@ def send_message(ip, tainted_port):
       #if (data.find('ack') >= 0 and data.find(str(ip)) >=0 and data.find(str(port)) >= 0): 
       if(data.find('ack') >= 0):
         log.debug('-------received ack!! -------' + data)
+        taint_notif_ack_recv[ip_taint_msg + str(local_tainted_port)] = 1
         waiting_for_ack = False
     sock.close()
   except Exception as e:
@@ -357,17 +359,17 @@ def _handle_PacketIn (event):
         skip_add_to_dict_dest = 0
       else:
         log.debug(" __________ Traffic from protected resource to internal host __________ ")
-        taint_action(dstip, dstport)
+        taint_action(dstip, dstport, srcip, srcport)
 
     elif(tainted_hosts.has_key(srcip) and (dstip not in protected_resources)):
       if(network_hosts_without_agent.Contains(ipaddr.IPAddress(srcip))):
         log.debug("-------- Traffic coming from tainted host without agent --------")
-        taint_action(dstip, dstport)
+        taint_action(dstip, dstport, srcip, srcport)
       else:
         if(tainted_hosts_ports.has_key(srcip)):
           if(srcport in tainted_hosts_ports[srcip]):
             log.debug("-------- traffic coming from a tainted port on a tainted host --------")
-            taint_action(dstip, dstport)
+            taint_action(dstip, dstport, srcip, srcport)
           else:
             log.debug("------ Clean traffic from a tainted host---------- ")
 
@@ -378,10 +380,16 @@ def _handle_PacketIn (event):
       ip_port_dict_local[srcip] = event.port
       pprint.pprint(ip_port_dict_local)
     if dstip not in ip_port_dict_local:
+      if(taint_notif_ack_recv.has_key(dstip+str(dstport))):
+        while(taint_notif_ack_recv[dstip + str(dstport)] == 0):
+          time.sleep(0.1)
       log.debug("flooding to all ports as no entry in dictionary" + srcip + "->" + dstip)
       flood()
       #flood_packet(event, of.OFPP_ALL)
     else:
+      if(taint_notif_ack_recv.has_key(dstip+str(dstport))):
+        while(taint_notif_ack_recv[dstip + str(dstport)] == 0):
+          time.sleep(0.1)
       port = ip_port_dict_local[dstip]
       log.debug("setting a flow table entry as matching entry found in dict - " + srcip + ":" + str(srcport) + " ->  " + dstip + ":" + str(dstport))
       msg = of.ofp_flow_mod()
@@ -398,25 +406,32 @@ def _handle_PacketIn (event):
 #############################################################################
 #function to perform the taint operations
 #############################################################################
-def taint_action(ip, port):
-  if ip in protected_resources:
+def taint_action(dstip, dstport, srcip, srcport):
+  if dstip in protected_resources:
     log.debug(" ------ Host to be tainted is a protected resource. No Action. Returning. --------------")
     return
-  if(port < 1 or port > 65534):
+  log.debug("Taint action arguments - dstip: %s  dstport: %d  srcip: %s  srcport: %d" %(dstip, int(dstport), srcip, int(srcport)))
+  if(int(dstport) < 1 or int(dstport) > 65534):
   	log.debug("----- Either ICMP packet or port not valid. No Action. Returning. ------------ ")
   	return
-  log.debug("<<<<<<<  Performing taint actions ip : "+ip + "  port :"+ str(port) +" >>>>>>>>>>")
-  if(network_hosts_without_agent.Contains(ipaddr.IPAddress(ip))):
+  log.debug("<<<<<<<  Performing taint actions ip : "+dstip + "  port :"+ str(dstport) +" >>>>>>>>>>")
+  if(network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip))):
     log.debug("### Host does not have an agent running - taint the whole host   ###")
-    port = -1
-  add_to_tainted_hosts(ip)
-  append_to_tainted_ports(ip, port)
-  delete_flow_entries(ip)
+    dstport = -1
+  add_to_tainted_hosts(dstip)
+  append_to_tainted_ports(dstip, int(dstport))
+  if(not taint_notif_ack_recv.has_key(dstip + str(dstport))):
+    taint_notif_ack_recv[dstip + str(dstport)] = 0
+  if(dstport not in tainted_hosts_ports[dstip]):
+    delete_flow_entries(dstip)
   #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
   #t.start()
-  if(port > 0):
-    t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-    t.start()
+  if(taint_notif_ack_recv[dstip + str(dstport)] == 0):
+    if(dstport > 0):
+      t = Thread(target = send_message, name = 'send_thread' + dstip, args = (dstip, dstport, srcip, srcport))
+      t.start()
+  else:
+    log.debug("--------------- taint notification for this host:port was already sent and ack received -----------")
     #spawned_threads_send[] = t
     #waiting_for_message.append(dest_eth_addr)
 
@@ -504,7 +519,7 @@ class MessageHandler(SocketServer.StreamRequestHandler):
 				take_counter_action(action)
                   	else:
                     		log.debug('------ tainted host sending tainted data to internal hosts ----------')
-                	  	taint_action(host_to_taint, tainted_dest_port)
+                	  	taint_action(host_to_taint, tainted_dest_port, client_addr, tainted_src_port)
 
       except Exception as e:
 	log.error('[!] Failed Handler: '+str(e))
