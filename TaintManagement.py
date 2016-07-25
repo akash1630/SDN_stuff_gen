@@ -31,6 +31,7 @@ check_for_stats_ctr = 1
 data_recvd_from_protected = {}
 prune_counter = 0
 samples = np.random.normal(250, 35, 1000)
+current_inbound_notif = []
 
 ############################################################################
 #    **** FOR TESTING PURPOSES ****
@@ -40,6 +41,11 @@ temp_map = {}
 temp_map['169.254.41.7']='192.168.56.101'
 temp_map['169.254.4.222']='192.168.56.102'
 temp_map['169.254.7.255'] = '192.168.56.103'
+
+temp_inverse_map = {}
+temp_inverse_map['192.168.56.101']='169.254.41.7'
+temp_inverse_map['192.168.56.102']='169.254.4.222'
+temp_inverse_map['192.168.56.103']='169.254.7.255'
 
 #############################################################################
 #define internal network here - ****IMPORTANT****
@@ -132,6 +138,22 @@ def delete_flow_entries(host):
   for conn in core.openflow.connections:
     conn.send(msg)
 
+##############################################################################
+#function tro delete flow entries for a specific host-port pair
+##############################################################################
+def delete_flow(host, port):
+  log.debug("deleting flow entries with src host-port " + str(host) + ": " + str(port))
+  msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
+  #msg.priority = 65635
+  msg.match.dl_type = 0x800
+  msg.match.nw_proto = 6
+  msg.match.nw_src = host
+  msg.match.tp_src = int(port)
+  for conn in core.openflow.connections:
+    conn.send(msg)
+
+
+
 def isolate_host(host):
   log.debug('----------------isolating host : ' + host + ' -------------')
   
@@ -218,6 +240,7 @@ def send_message(ip_taint_msg, local_tainted_port, remote_ip, remote_port):
       if(data.find('ack') >= 0):
         log.debug('-------received ack!! -------' + data)
         taint_notif_ack_recv[ip_taint_msg + str(local_tainted_port)] = 1
+        current_inbound_notif.remove(remote_ip)
         waiting_for_ack = False
     sock.close()
   except Exception as e:
@@ -275,6 +298,27 @@ def _handle_flowstats_received(event):
       (tracked_flows.get(src + '-' + dst))[1] = packets_count
       (tracked_flows.get(src + '-' + dst))[2] = flows_count
       log.debug("traffic switch %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
+
+############################################################################
+#Event handler for flow removed from switch event
+############################################################################
+def _handle_flow_removed(event):
+
+  msg = event.ofp
+  dstip = str(msg.match.nw_dst)
+  dstport = msg.match.tp_dst
+  reason = msg.reason
+  if reason == 0:
+    reason = "idle_timeout"
+  elif reason == 1:
+    reason = "hard_timeout"
+  elif reason == 2:
+    reason = "controller explicitly removed"
+  #log.debug("^^^^^ handling flow removed: "+ reason + " - dstip:" + dstip + "  dstport: "+ str(dstport))
+  key = dstip + str(dstport)
+  if taint_notif_ack_recv.has_key(key):
+    log.debug("----- tainted flow removed from switch due " + reason + " - dstip:" + dstip + "  dstport: "+ str(dstport))
+    del taint_notif_ack_recv[key]
 
 
 #############################################################################
@@ -383,6 +427,8 @@ def _handle_PacketIn (event):
       if(taint_notif_ack_recv.has_key(dstip+str(dstport))):
         while(taint_notif_ack_recv[dstip + str(dstport)] == 0):
           time.sleep(0.02)
+      #while (srcip in current_inbound_notif):
+        #time.sleep(0.02)
       log.debug("flooding to all ports as no entry in dictionary" + srcip + "->" + dstip)
       flood()
       #flood_packet(event, of.OFPP_ALL)
@@ -390,11 +436,15 @@ def _handle_PacketIn (event):
       if(taint_notif_ack_recv.has_key(dstip+str(dstport))):
         while(taint_notif_ack_recv[dstip + str(dstport)] == 0):
           time.sleep(0.02)
+      #while (srcip in current_inbound_notif):
+        #time.sleep(0.02)
       port = ip_port_dict_local[dstip]
       log.debug("setting a flow table entry as matching entry found in dict - " + srcip + ":" + str(srcport) + " ->  " + dstip + ":" + str(dstport))
       msg = of.ofp_flow_mod()
       msg.match = of.ofp_match.from_packet(packet, event.port)
       msg.priority = 1009
+      msg.idle_timeout = 10
+      msg.flags = of.OFPFF_SEND_FLOW_REM
       msg.actions.append(of.ofp_action_output(port = port))
       msg.data = event.ofp
       event.connection.send(msg)
@@ -418,22 +468,25 @@ def taint_action(dstip, dstport, srcip, srcport):
   if(network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip))):
     log.debug("### Host does not have an agent running - taint the whole host   ###")
     dstport = -1
+  if temp_inverse_map.has_key(srcip):
+    srcip = temp_inverse_map[srcip]
   add_to_tainted_hosts(dstip)
-  append_to_tainted_ports(dstip, int(dstport))
+  #append_to_tainted_ports(dstip, int(dstport))
+  if (srcip not in protected_resources):
+    add_to_tainted_hosts(srcip)
+    append_to_tainted_ports(srcip, int(srcport))
   if(not network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip)) and not taint_notif_ack_recv.has_key(dstip + str(dstport))):
     taint_notif_ack_recv[dstip + str(dstport)] = 0
-  if(dstport not in tainted_hosts_ports[dstip]):
-    delete_flow_entries(dstip)
-  #t = Thread(target = send_message, name = 'send_thread' + ip, args = (ip, port))
-  #t.start()
+  #if(dstport not in tainted_hosts_ports[dstip]):
+  delete_flow_entries(dstip)
+  delete_flow(srcip, srcport)
+  
   if(taint_notif_ack_recv[dstip + str(dstport)] == 0):
     if(dstport > 0):
       t = Thread(target = send_message, name = 'send_thread' + dstip, args = (dstip, dstport, srcip, srcport))
       t.start()
   else:
     log.debug("--------------- taint notification for this host:port was already sent and ack received -----------")
-    #spawned_threads_send[] = t
-    #waiting_for_message.append(dest_eth_addr)
 
 
 #############################################################################
@@ -487,9 +540,14 @@ def launch ():
   core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
+  core.openflow.addListenerByName("FlowRemoved", _handle_flow_removed)
   #thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
   #thr.start()
 
+
+##############################################################################
+#class to handle the taint notification messages from hosts to ctrl
+##############################################################################
 class MessageHandler(SocketServer.StreamRequestHandler):
     def handle(self):
       try:
@@ -497,6 +555,10 @@ class MessageHandler(SocketServer.StreamRequestHandler):
     	self.data = self.request.recv(1024).strip()
     	log.debug("received message : " + self.data)
 	client_addr = str(self.client_address[0])
+        if temp_inverse_map.has_key(client_addr):
+          current_inbound_notif.append(temp_inverse_map[client_addr])
+        else:
+          current_inbound_notif.append(client_addr)
         host_msg = self.data.split(',')
         if ('taint' in host_msg[0].lower()):
             #rhost = ipaddr.IPAddress(host_msg[1])
