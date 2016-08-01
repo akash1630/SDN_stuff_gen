@@ -55,7 +55,7 @@ protected_resources = config.protected_resources       #list of protected resour
 hosts_without_agent = config.hosts_without_agent
 network_hosts_without_agent = ipaddr.IPNetwork(hosts_without_agent)
 isolate_if_pivot_ips = config.isolate_if_pivot_ips
-isolate_if_pivot_network = ipaddr..IPNetwork(isolate_if_pivot_ips)
+isolate_if_pivot_network = ipaddr.IPNetwork(isolate_if_pivot_ips)
 restrict_if_pivot_ips = config.restrict_if_pivot_ips
 restrict_if_pivot_network = ipaddr.IPNetwork(restrict_if_pivot_ips)
 throttle_outbound_if_pivot_ips = config.throttle_outbound_if_pivot_ips
@@ -138,8 +138,12 @@ def delete_flow_entries(host):
   #msg.priority = 65635
   msg.match.dl_type = 0x800
   msg.match.nw_src = host
+  msg2 = of.ofp_flow_mod(command = of.OFPFC_DELETE)
+  msg2.match.dl_type = 0x800
+  msg2.match.nw_dst = host
   for conn in core.openflow.connections:
     conn.send(msg)
+    conn.send(msg2)
 
 ##############################################################################
 #function tro delete flow entries for a specific host-port pair
@@ -155,6 +159,18 @@ def delete_flow(host, port):
   for conn in core.openflow.connections:
     conn.send(msg)
 
+
+###############################################################################
+#Function to delete all outgoing flows for a host
+###############################################################################
+def delete_outgoing_flows(host):
+  log.debug("deleting all outgoing flows for host: " + str(host))
+  msg = of.ofp_flow_mod(command = of.OFPFC_DELETE)
+  #msg.priority = 65635
+  msg.match.dl_type = 0x800
+  msg.match.nw_src = host
+  for conn in core.openflow.connections:
+    conn.send(msg)
 
 
 def isolate_host(host):
@@ -378,7 +394,7 @@ def _handle_PacketIn (event):
   	is_icmp_pack = 1
 
   if srcip in suspected_hosts:
-  	if (srcip in isolated_host or srcip in restricted_hosts):
+    if (srcip in isolated_host or srcip in restricted_hosts):
       delete_flow_entries(srcip)
       drop_packet(event)
       return
@@ -386,8 +402,8 @@ def _handle_PacketIn (event):
       pass
   
   if dstip in isolated_host:
-  	drop_packet(event)
-  	return
+    drop_packet(event)
+    return
 
   def flood (message = None):
     msg = of.ofp_packet_out()
@@ -515,7 +531,7 @@ def decide_action_pivot(client_address):
   action = "restrict"
   ip = ipaddr.IPAddress(client_address)
   if(isolate_if_pivot_network.Contains(ip)):
-  	return "isolate"
+    return "isolate"
   elif(restrict_if_pivot_network.Contains(ip)):
     return "restrict"
   elif(throttle_outbound_if_pivot_network.Contains(ip)):
@@ -530,13 +546,13 @@ def decide_action_pivot(client_address):
 def take_counter_action(action, pivot_host):
   log.debug("###### Action decided for pivot : " + action)
   if(action == "isolate"):
-  	suspected_hosts.append(pivot_host)
-  	isolated_host.append(pivot_host)
+    suspected_hosts.append(pivot_host)
+    isolated_host.append(pivot_host)
     delete_flow_entries(pivot_host)
   elif(action == "pivot"):
-  	suspected_hosts.append(pivot_host)
-  	restricted_hosts.append(pivot_host)
-  	delete_outgoing_flows(pivot_host)
+    suspected_hosts.append(pivot_host)
+    restricted_hosts.append(pivot_host)
+    delete_outgoing_flows(pivot_host)
   elif(action == "throttle"):
     pass
 
