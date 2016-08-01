@@ -13,6 +13,8 @@ from threading import Thread
 import numpy as np
 import scipy as sp
 
+import config
+
 from pox.openflow.of_json import *
 
 log = core.getLogger()
@@ -20,6 +22,8 @@ ip_port_dict_local = {}                  #mapping for destination mac addr and e
 tainted_hosts = {}                       #dict: key - tainted hosts (ip addresses), val - timestamp
 tainted_hosts_ports = {}                 #dict: key - tainted hosts (ip addresses), val - ports list
 suspected_hosts = []                     #list of suspected hosts acting as pivots
+isolated_host = []
+restricted_hosts = []
 spawned_threads_send = {}
 spawned_threads_receive = {}
 taint_notif_ack_recv = {}
@@ -37,28 +41,27 @@ current_inbound_notif = []
 #    **** FOR TESTING PURPOSES ****
 ############################################################################
 
-temp_map = {}
-temp_map['169.254.41.7']='192.168.56.101'
-temp_map['169.254.4.222']='192.168.56.102'
-temp_map['169.254.7.255'] = '192.168.56.103'
+temp_map = config.temp_map
+temp_inverse_map = config.temp_inverse_map
 
-temp_inverse_map = {}
-temp_inverse_map['192.168.56.101']='169.254.41.7'
-temp_inverse_map['192.168.56.102']='169.254.4.222'
-temp_inverse_map['192.168.56.103']='169.254.7.255'
 
 #############################################################################
 #define internal network here - ****IMPORTANT****
 #############################################################################
-internal_ips = "169.254.0.0/16"
+internal_ips = config.internal_ips
 internal_network = ipaddr.IPNetwork(internal_ips)
-restrict_if_pivot_ips = "169.254.4.0/24"
-restrict_if_pivot_network = ipaddr.IPNetwork(restrict_if_pivot_ips)
-throttle_outbound_if_pivot_ips = "169.254.7.0/24"
-throttle_outbound_if_pivot_network = ipaddr.IPNetwork(throttle_outbound_if_pivot_ips)
-hosts_without_agent = "10.0.0.5/32"
+protected_resources = config.protected_resources       #list of protected resources
+#protected_network = ipaddr.IPNetwork(protected_resources)
+hosts_without_agent = config.hosts_without_agent
 network_hosts_without_agent = ipaddr.IPNetwork(hosts_without_agent)
-protected_resources = ["169.254.7.255"]       #list of protected resources
+isolate_if_pivot_ips = config.isolate_if_pivot_ips
+isolate_if_pivot_network = ipaddr..IPNetwork(isolate_if_pivot_ips)
+restrict_if_pivot_ips = config.restrict_if_pivot_ips
+restrict_if_pivot_network = ipaddr.IPNetwork(restrict_if_pivot_ips)
+throttle_outbound_if_pivot_ips = config.throttle_outbound_if_pivot_ips
+throttle_outbound_if_pivot_network = ipaddr.IPNetwork(throttle_outbound_if_pivot_ips)
+redirect_to_honeynet_ips = config.redirect_to_honeynet_ips
+redirect_to_honeynet_network = ipaddr.IPNetwork(redirect_to_honeynet_ips)
 
 
 #############################################################################
@@ -375,10 +378,16 @@ def _handle_PacketIn (event):
   	is_icmp_pack = 1
 
   if srcip in suspected_hosts:
-    delete_flow_entries(srcip)
-    drop_packet(event)
-    return
-
+  	if (srcip in isolated_host or srcip in restricted_hosts):
+      delete_flow_entries(srcip)
+      drop_packet(event)
+      return
+    else:
+      pass
+  
+  if dstip in isolated_host:
+  	drop_packet(event)
+  	return
 
   def flood (message = None):
     msg = of.ofp_packet_out()
@@ -505,7 +514,9 @@ def check_for_pivot(ip):
 def decide_action_pivot(client_address):
   action = "restrict"
   ip = ipaddr.IPAddress(client_address)
-  if(restrict_if_pivot_network.Contains(ip)):
+  if(isolate_if_pivot_network.Contains(ip)):
+  	return "isolate"
+  elif(restrict_if_pivot_network.Contains(ip)):
     return "restrict"
   elif(throttle_outbound_if_pivot_network.Contains(ip)):
     return "throttle"
@@ -516,10 +527,16 @@ def decide_action_pivot(client_address):
 #############################################################################
 #function to take the decided counter measure against detected  pivot
 #############################################################################
-def take_counter_action(action):
+def take_counter_action(action, pivot_host):
   log.debug("###### Action decided for pivot : " + action)
-  if(action == "restrict"):
-    pass
+  if(action == "isolate"):
+  	suspected_hosts.append(pivot_host)
+  	isolated_host.append(pivot_host)
+    delete_flow_entries(pivot_host)
+  elif(action == "pivot"):
+  	suspected_hosts.append(pivot_host)
+  	restricted_hosts.append(pivot_host)
+  	delete_outgoing_flows(pivot_host)
   elif(action == "throttle"):
     pass
 
@@ -578,7 +595,7 @@ class MessageHandler(SocketServer.StreamRequestHandler):
                   	if(pivot):
                     		log.debug('######---- Pivot Detected : '+ client_addr + ' - check action---------------######')
                         	action = decide_action_pivot(client_addr)
-				take_counter_action(action)
+				take_counter_action(action, client_addr)
                   	else:
                     		log.debug('------ tainted host sending tainted data to internal hosts ----------')
                 	  	taint_action(host_to_taint, tainted_dest_port, client_addr, tainted_src_port)
