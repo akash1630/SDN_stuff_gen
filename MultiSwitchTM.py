@@ -575,6 +575,7 @@ def take_counter_action(action, pivot_host):
 
 class Launcher(object):
   def _init_(self):
+    log.debug("--- init for launcher ----")
     core.openflow.addListeners(self)
 
 #############################################################################
