@@ -285,6 +285,10 @@ def get_flow_stats():
     conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
 
 
+
+
+
+
 #############################################################################
 #function to perform the taint operations
 #############################################################################
@@ -366,7 +370,7 @@ def take_counter_action(action, pivot_host):
 
 
 #############################################################################
-# class for switches
+  #class
 #############################################################################
 
 
@@ -385,7 +389,7 @@ class Switch(object):
   #############################################################################
   def _handle_PacketIn (self, event):
 
-    #log.debug("~~~~~~ packet in event from switch %s and object is %s", event.connection, self.connection)
+    log.debug("~~~~~~ packet in event from switch %s and object is %s", event.connection, self.connection)
     global forward_rule_set
     global backward_rule_set
     global protected_resources
@@ -448,7 +452,7 @@ class Switch(object):
     def flood (message = None):
       msg = of.ofp_packet_out()
       if message is not None: log.debug(message)
-      #log.debug("%i: flood %s -> %s", event.dpid,packet.src,packet.dst)
+      log.debug("%i: flood %s -> %s", event.dpid,packet.src,packet.dst)
       # OFPP_FLOOD is optional; on some switches you may need to change
       # this to OFPP_ALL.
       msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
@@ -514,6 +518,8 @@ class Switch(object):
         msg.actions.append(of.ofp_action_output(port = port))
         msg.data = event.ofp
         self.connection.send(msg)
+
+
     elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
       log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
       flood_packet(event, of.OFPP_ALL)  
@@ -574,6 +580,7 @@ def _handle_FlowRemoved(event):
 
 class Launcher (object):
   def __init__ (self):
+    log.debug("--- init for launcher ----")
     core.openflow.addListeners(self)
 
   #############################################################################
@@ -588,6 +595,7 @@ class Launcher (object):
 #Launch method for the controller app
 #############################################################################
 def launch ():
+  #Timer(50, prune_tainted_list, recurring = True)
   Timer(.5, taint_msg_listener, recurring = False)
   import pox.openflow.discovery
   pox.openflow.discovery.launch()
@@ -598,6 +606,8 @@ def launch ():
   #core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   #core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
   #core.openflow.addListenerByName("FlowRemoved", _handle_flow_removed)
+  #thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
+  #thr.start()
 
 
 ##############################################################################
