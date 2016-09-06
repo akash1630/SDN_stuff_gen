@@ -382,7 +382,7 @@ class Switch(object):
     self.ip_port_dict_local = {}                  #mapping for destination mac addr and egres port
 
     
-    core.openflow.addListeners(self)
+    connection.addListeners(self)
 
   #############################################################################
   #Event handler for packet_in event
@@ -522,62 +522,58 @@ class Switch(object):
       log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
       flood_packet(event, of.OFPP_ALL)  
 
-  ##############################################################################
-  #EVent handler for flow stats recieved event
-  ##############################################################################
-  def _handle_FlowStatsReceived(self, event):
-    stats = flow_stats_to_list(event.stats)
-    #log.debug("FlowStatsReceived from %s: %s", dpidToStr(event.connection.dpid), stats)
-    log.debug("FlowStatsReceived from %s", dpidToStr(self.connection.dpid))
-    
-    for f in event.stats:
+##############################################################################
+#EVent handler for flow stats recieved event
+##############################################################################
+def _handle_FlowStatsReceived(event):
+  stats = flow_stats_to_list(event.stats)
+  #log.debug("FlowStatsReceived from %s: %s", dpidToStr(event.connection.dpid), stats)
+  log.debug("FlowStatsReceived from %s", dpidToStr(self.connection.dpid))
+  
+  for f in event.stats:
 
-      if tainted_hosts.has_key(str(f.match.dl_src)) or str(f.match.dl_src) in protected_resources:
-        print('***** storing statstics ******')
-        bytes_count = 0
-        flows_count = 0
-        packets_count = 0
-        dst = str(f.match.dl_dst)
-        src = str(f.match.dl_src)
-        bytes_count += f.byte_count
-        packets_count += f.packet_count
-        flows_count += 1
+    if tainted_hosts.has_key(str(f.match.dl_src)) or str(f.match.dl_src) in protected_resources:
+      print('***** storing statstics ******')
+      bytes_count = 0
+      flows_count = 0
+      packets_count = 0
+      dst = str(f.match.dl_dst)
+      src = str(f.match.dl_src)
+      bytes_count += f.byte_count
+      packets_count += f.packet_count
+      flows_count += 1
 
-        if src in protected_resources:
-          data_recvd_from_protected[dst] = bytes_count
+      if src in protected_resources:
+        data_recvd_from_protected[dst] = bytes_count
 
-        if not tracked_flows.has_key(src + '-' + dst):
-          tracked_flows[src + '-' + dst] = [0,0,0]
+      if not tracked_flows.has_key(src + '-' + dst):
+        tracked_flows[src + '-' + dst] = [0,0,0]
 
-        (tracked_flows.get(src + '-' + dst))[0] = bytes_count
-        (tracked_flows.get(src + '-' + dst))[1] = packets_count
-        (tracked_flows.get(src + '-' + dst))[2] = flows_count
-        log.debug("traffic switch %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
+      (tracked_flows.get(src + '-' + dst))[0] = bytes_count
+      (tracked_flows.get(src + '-' + dst))[1] = packets_count
+      (tracked_flows.get(src + '-' + dst))[2] = flows_count
+      log.debug("traffic switch %s: %s bytes %s packets  %s flows", dpidToStr(event.connection.dpid), bytes_count, packets_count, flows_count)
 
-  ############################################################################
-  #Event handler for flow removed from switch event
-  ############################################################################
-  def _handle_FlowRemoved(self, event):
+############################################################################
+#Event handler for flow removed from switch event
+############################################################################
+def _handle_FlowRemoved(event):
 
-    msg = event.ofp
-    dstip = str(msg.match.nw_dst)
-    dstport = msg.match.tp_dst
-    reason = msg.reason
-    if reason == 0:
-      reason = "idle_timeout"
-    elif reason == 1:
-      reason = "hard_timeout"
-    elif reason == 2:
-      reason = "controller explicitly removed"
-    #log.debug("^^^^^ handling flow removed: "+ reason + " - dstip:" + dstip + "  dstport: "+ str(dstport))
-    key = dstip + str(dstport)
-    if taint_notif_ack_recv.has_key(key):
-      log.debug("----- tainted flow removed from switch due " + reason + " - dstip:" + dstip + "  dstport: "+ str(dstport))
-      del taint_notif_ack_recv[key]
-
-
-
-
+  msg = event.ofp
+  dstip = str(msg.match.nw_dst)
+  dstport = msg.match.tp_dst
+  reason = msg.reason
+  if reason == 0:
+    reason = "idle_timeout"
+  elif reason == 1:
+    reason = "hard_timeout"
+  elif reason == 2:
+    reason = "controller explicitly removed"
+  #log.debug("^^^^^ handling flow removed: "+ reason + " - dstip:" + dstip + "  dstport: "+ str(dstport))
+  key = dstip + str(dstport)
+  if taint_notif_ack_recv.has_key(key):
+    log.debug("----- tainted flow removed from switch due " + reason + " - dstip:" + dstip + "  dstport: "+ str(dstport))
+    del taint_notif_ack_recv[key]
 
 
 class Launcher (object):
@@ -600,7 +596,6 @@ def launch ():
   #Timer(50, prune_tainted_list, recurring = True)
   Timer(.5, taint_msg_listener, recurring = False)
   core.registerNew(Launcher)
-  log.debug("-------------- launched ----------------")
   #core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   #core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   #core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
