@@ -525,7 +525,7 @@ class Switch(object):
 ##############################################################################
 #EVent handler for flow stats recieved event
 ##############################################################################
-def _handle_FlowStatsReceived(event):
+def _handle_flowstats_received(event):
   stats = flow_stats_to_list(event.stats)
   #log.debug("FlowStatsReceived from %s: %s", dpidToStr(event.connection.dpid), stats)
   log.debug("FlowStatsReceived from %s", dpidToStr(self.connection.dpid))
@@ -557,7 +557,7 @@ def _handle_FlowStatsReceived(event):
 ############################################################################
 #Event handler for flow removed from switch event
 ############################################################################
-def _handle_FlowRemoved(event):
+def _handle_flow_removed(event):
 
   msg = event.ofp
   dstip = str(msg.match.nw_dst)
@@ -602,8 +602,8 @@ def launch ():
   core.registerNew(Launcher)
   #core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   #core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
-  #core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
-  #core.openflow.addListenerByName("FlowRemoved", _handle_flow_removed)
+  core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
+  core.openflow.addListenerByName("FlowRemoved", _handle_flow_removed)
   #thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
   #thr.start()
 
