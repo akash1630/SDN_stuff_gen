@@ -292,6 +292,7 @@ def get_flow_stats():
 
 class Switch(object):
   def __init__ (self, connection):
+    log.debug("####**** object created for %s", connection)
     self.connection = connection
 
     self.ip_port_dict_local = {}                  #mapping for destination mac addr and egres port
@@ -572,14 +573,14 @@ def take_counter_action(action, pivot_host):
     pass
 
 
-class Launcher(self):
+class Launcher(object):
   def _init_(self):
     core.openflow.addListeners(self)
 
 #############################################################################
 #Event handler for connectionUp event
 #############################################################################
-def _handle_ConnectionUp (event):
+def _handle_ConnectionUp (self,event):
   log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
   Switch(event.connection)
 
@@ -590,7 +591,8 @@ def _handle_ConnectionUp (event):
 def launch ():
   #Timer(50, prune_tainted_list, recurring = True)
   Timer(.5, taint_msg_listener, recurring = False)
-  core.registerNew(Launcher)
+  core.register(Launcher)
+  log.debug("-------------- launched ----------------")
   #core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   #core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   #core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
