@@ -391,7 +391,6 @@ class Switch(object):
 
     global forward_rule_set
     global backward_rule_set
-    global ip_port_dict_local
     global protected_resources
     global tainted_hosts
     global mac_ip_map
@@ -491,8 +490,8 @@ class Switch(object):
       if (srcip != "" and srcip != ''):
         log.debug("  adding to dictionary skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
         self.ip_port_dict_local[srcip] = event.port
-        pprint.pprint(ip_port_dict_local)
-      if dstip not in ip_port_dict_local:
+        pprint.pprint(self.ip_port_dict_local)
+      if dstip not in self.ip_port_dict_local:
         if(taint_notif_ack_recv.has_key(dstip+str(dstport))):
           while(taint_notif_ack_recv[dstip + str(dstport)] == 0):
             time.sleep(0.02)
