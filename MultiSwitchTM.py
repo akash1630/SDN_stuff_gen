@@ -457,6 +457,7 @@ class Switch(object):
       msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
       msg.data = event.ofp
       msg.in_port = event.port
+      log.debug("===== flood message to switch %s : %i", self.connection, event.port)
       self.connection.send(msg)
 
 
@@ -523,7 +524,7 @@ class Switch(object):
   ##############################################################################
   #EVent handler for flow stats recieved event
   ##############################################################################
-  def _handle_flowstats_received(self, event):
+  def _handle_FlowStatsReceived(self, event):
     stats = flow_stats_to_list(event.stats)
     #log.debug("FlowStatsReceived from %s: %s", dpidToStr(event.connection.dpid), stats)
     log.debug("FlowStatsReceived from %s", dpidToStr(self.connection.dpid))
@@ -555,7 +556,7 @@ class Switch(object):
   ############################################################################
   #Event handler for flow removed from switch event
   ############################################################################
-  def _handle_flow_removed(self, event):
+  def _handle_FlowRemoved(self, event):
 
     msg = event.ofp
     dstip = str(msg.match.nw_dst)
