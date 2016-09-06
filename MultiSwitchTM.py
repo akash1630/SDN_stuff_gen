@@ -572,9 +572,9 @@ def take_counter_action(action, pivot_host):
     pass
 
 
-#class Launcher(self):
-  #def _init_(self):
-    #core.openflow.addListeners(self)
+class Launcher(self):
+  def _init_(self):
+    core.openflow.addListeners(self)
 
 #############################################################################
 #Event handler for connectionUp event
@@ -590,10 +590,11 @@ def _handle_ConnectionUp (event):
 def launch ():
   #Timer(50, prune_tainted_list, recurring = True)
   Timer(.5, taint_msg_listener, recurring = False)
-  core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
-  core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
-  core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
-  core.openflow.addListenerByName("FlowRemoved", _handle_flow_removed)
+  core.registerNew(Launcher)
+  #core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
+  #core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
+  #core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
+  #core.openflow.addListenerByName("FlowRemoved", _handle_flow_removed)
   #thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
   #thr.start()
 
