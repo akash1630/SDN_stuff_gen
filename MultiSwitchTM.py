@@ -285,6 +285,90 @@ def get_flow_stats():
     conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
 
 
+
+
+
+
+#############################################################################
+#function to perform the taint operations
+#############################################################################
+def taint_action(dstip, dstport, srcip, srcport):
+  if dstip in protected_resources:
+    log.debug(" ------ Host to be tainted is a protected resource. No Action. Returning. --------------")
+    return
+  log.debug("Taint action arguments - dstip: %s  dstport: %d  srcip: %s  srcport: %d" %(dstip, int(dstport), srcip, int(srcport)))
+  if(int(dstport) < 1 or int(dstport) > 65534):
+  	log.debug("----- Either ICMP packet or port not valid. No Action. Returning. ------------ ")
+  	return
+  log.debug("<<<<<<<  Performing taint actions ip : "+dstip + "  port :"+ str(dstport) +" >>>>>>>>>>")
+  if(network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip))):
+    log.debug("### Host does not have an agent running - taint the whole host   ###")
+    dstport = -1
+  if temp_inverse_map.has_key(srcip):
+    srcip = temp_inverse_map[srcip]
+  add_to_tainted_hosts(dstip)
+  #append_to_tainted_ports(dstip, int(dstport))
+  if (srcip not in protected_resources):
+    add_to_tainted_hosts(srcip)
+    append_to_tainted_ports(srcip, int(srcport))
+  if(not network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip)) and not taint_notif_ack_recv.has_key(dstip + str(dstport))):
+    taint_notif_ack_recv[dstip + str(dstport)] = 0
+  #if(dstport not in tainted_hosts_ports[dstip]):
+  delete_flow_entries(dstip)
+  delete_flow(srcip, srcport)
+  
+  if(taint_notif_ack_recv[dstip + str(dstport)] == 0):
+    if(dstport > 0):
+      t = Thread(target = send_message, name = 'send_thread' + dstip, args = (dstip, dstport, srcip, srcport))
+      t.start()
+  else:
+    log.debug("--------------- taint notification for this host:port was already sent and ack received -----------")
+
+
+#############################################################################
+#function to check if the current tainted connection indicates pivoting
+#############################################################################
+def check_for_pivot(ip):
+  log.debug("------ Checking if pivot (tainted connection to external network) ----------")
+  ipaddr_to_check = ipaddr.IPAddress(ip)
+  is_external = not (internal_network.Contains(ipaddr_to_check))
+  return is_external
+
+
+#############################################################################
+#function to decide the action to be performed after pivot detection
+#############################################################################
+def decide_action_pivot(client_address):
+  action = "restrict"
+  ip = ipaddr.IPAddress(client_address)
+  if(isolate_if_pivot_network.Contains(ip)):
+    return "isolate"
+  elif(restrict_if_pivot_network.Contains(ip)):
+    return "restrict"
+  elif(throttle_outbound_if_pivot_network.Contains(ip)):
+    return "throttle"
+  #log.debug("*** Developer machine - Isolating " + client_address)
+  return action
+
+
+#############################################################################
+#function to take the decided counter measure against detected  pivot
+#############################################################################
+def take_counter_action(action, pivot_host):
+  log.debug("###### Action decided for pivot : " + action)
+  if(action == "isolate"):
+    suspected_hosts.append(pivot_host)
+    isolated_host.append(pivot_host)
+    delete_flow_entries(pivot_host)
+  elif(action == "pivot"):
+    suspected_hosts.append(pivot_host)
+    restricted_hosts.append(pivot_host)
+    delete_outgoing_flows(pivot_host)
+  elif(action == "throttle"):
+    pass
+
+
+
 #############################################################################
   #class
 #############################################################################
@@ -494,96 +578,18 @@ class Switch(object):
 
 
 
-#############################################################################
-#function to perform the taint operations
-#############################################################################
-def taint_action(dstip, dstport, srcip, srcport):
-  if dstip in protected_resources:
-    log.debug(" ------ Host to be tainted is a protected resource. No Action. Returning. --------------")
-    return
-  log.debug("Taint action arguments - dstip: %s  dstport: %d  srcip: %s  srcport: %d" %(dstip, int(dstport), srcip, int(srcport)))
-  if(int(dstport) < 1 or int(dstport) > 65534):
-  	log.debug("----- Either ICMP packet or port not valid. No Action. Returning. ------------ ")
-  	return
-  log.debug("<<<<<<<  Performing taint actions ip : "+dstip + "  port :"+ str(dstport) +" >>>>>>>>>>")
-  if(network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip))):
-    log.debug("### Host does not have an agent running - taint the whole host   ###")
-    dstport = -1
-  if temp_inverse_map.has_key(srcip):
-    srcip = temp_inverse_map[srcip]
-  add_to_tainted_hosts(dstip)
-  #append_to_tainted_ports(dstip, int(dstport))
-  if (srcip not in protected_resources):
-    add_to_tainted_hosts(srcip)
-    append_to_tainted_ports(srcip, int(srcport))
-  if(not network_hosts_without_agent.Contains(ipaddr.IPAddress(dstip)) and not taint_notif_ack_recv.has_key(dstip + str(dstport))):
-    taint_notif_ack_recv[dstip + str(dstport)] = 0
-  #if(dstport not in tainted_hosts_ports[dstip]):
-  delete_flow_entries(dstip)
-  delete_flow(srcip, srcport)
-  
-  if(taint_notif_ack_recv[dstip + str(dstport)] == 0):
-    if(dstport > 0):
-      t = Thread(target = send_message, name = 'send_thread' + dstip, args = (dstip, dstport, srcip, srcport))
-      t.start()
-  else:
-    log.debug("--------------- taint notification for this host:port was already sent and ack received -----------")
 
-
-#############################################################################
-#function to check if the current tainted connection indicates pivoting
-#############################################################################
-def check_for_pivot(ip):
-  log.debug("------ Checking if pivot (tainted connection to external network) ----------")
-  ipaddr_to_check = ipaddr.IPAddress(ip)
-  is_external = not (internal_network.Contains(ipaddr_to_check))
-  return is_external
-
-
-#############################################################################
-#function to decide the action to be performed after pivot detection
-#############################################################################
-def decide_action_pivot(client_address):
-  action = "restrict"
-  ip = ipaddr.IPAddress(client_address)
-  if(isolate_if_pivot_network.Contains(ip)):
-    return "isolate"
-  elif(restrict_if_pivot_network.Contains(ip)):
-    return "restrict"
-  elif(throttle_outbound_if_pivot_network.Contains(ip)):
-    return "throttle"
-  #log.debug("*** Developer machine - Isolating " + client_address)
-  return action
-
-
-#############################################################################
-#function to take the decided counter measure against detected  pivot
-#############################################################################
-def take_counter_action(action, pivot_host):
-  log.debug("###### Action decided for pivot : " + action)
-  if(action == "isolate"):
-    suspected_hosts.append(pivot_host)
-    isolated_host.append(pivot_host)
-    delete_flow_entries(pivot_host)
-  elif(action == "pivot"):
-    suspected_hosts.append(pivot_host)
-    restricted_hosts.append(pivot_host)
-    delete_outgoing_flows(pivot_host)
-  elif(action == "throttle"):
-    pass
-
-
-class Launcher(object):
+class Launcher (object):
   def __init__ (self):
     log.debug("--- init for launcher ----")
     core.openflow.addListeners(self)
 
-#############################################################################
-#Event handler for connectionUp event
-#############################################################################
-def _handle_ConnectionUp (self,event):
-  log.debug("[!] HubACLs v0.0.1 Running %s", dpidToStr(event.dpid))
-  Switch(event.connection)
+  #############################################################################
+  #Event handler for connectionUp event
+  #############################################################################
+  def _handle_ConnectionUp (self,event):
+    log.debug("Running %s", dpidToStr(event.dpid))
+    Switch(event.connection)
 
 
 #############################################################################
@@ -592,7 +598,7 @@ def _handle_ConnectionUp (self,event):
 def launch ():
   #Timer(50, prune_tainted_list, recurring = True)
   Timer(.5, taint_msg_listener, recurring = False)
-  core.register(Launcher)
+  core.registerNew(Launcher)
   log.debug("-------------- launched ----------------")
   #core.openflow.addListenerByName("ConnectionUp", _handle_ConnectionUp)
   #core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
