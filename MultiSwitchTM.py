@@ -389,6 +389,7 @@ class Switch(object):
   #############################################################################
   def _handle_PacketIn (self, event):
 
+    log.debug("~~~~~~ packet in event from switch %s and object is %s", event.connection, self.connection)
     global forward_rule_set
     global backward_rule_set
     global protected_resources
