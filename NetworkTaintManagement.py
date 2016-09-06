@@ -285,6 +285,10 @@ def get_flow_stats():
     conn.send(of.ofp_stats_request(body=of.ofp_flow_stats_request()))
 
 
+
+
+
+
 #############################################################################
 #function to perform the taint operations
 #############################################################################
@@ -366,7 +370,7 @@ def take_counter_action(action, pivot_host):
 
 
 #############################################################################
-# class for switches
+  #class
 #############################################################################
 
 
@@ -384,8 +388,8 @@ class Switch(object):
   #Event handler for packet_in event
   #############################################################################
   def _handle_PacketIn (self, event):
-
-    #log.debug("~~~~~~ packet in event from switch %s and object is %s", event.connection, self.connection)
+    
+    log.debug("~~~~~~ packet in event from switch %s and object is %s", event.connection, self.connection)
     global forward_rule_set
     global backward_rule_set
     global protected_resources
@@ -424,9 +428,7 @@ class Switch(object):
       #log.debug("TCP pakcet! - SYN : %d   FIN: %d  ACK: %d ", tcp.SYN, tcp.FIN, tcp.ACK)
       srcport = tcp.srcport
       dstport = tcp.dstport
-      if tcp.ACK:
-        log.debug("!!!!!!   TCP ack packet  %s   !!!!!!", key)
-        #mac_port_dict[packet.src] = event.port
+      if tcp.ACK: 
         is_tcp_ack = 1
 
     icmp = packet.find("icmp")
@@ -454,7 +456,7 @@ class Switch(object):
       msg.actions.append(of.ofp_action_output(port = of.OFPP_FLOOD))
       msg.data = event.ofp
       msg.in_port = event.port
-      log.debug("===== flood message to switch %s : %i", self.connection, event.port)
+      #log.debug("===== flood message to switch %s : %i", self.connection, event.port)
       self.connection.send(msg)
 
 
@@ -514,6 +516,8 @@ class Switch(object):
         msg.actions.append(of.ofp_action_output(port = port))
         msg.data = event.ofp
         self.connection.send(msg)
+
+
     elif (skip_add_to_dict_dest == 1) and (skip_add_to_dict_src == 0):
       log.debug("  ready to flood. skip_add_to_dict_src is %i and skip_add_to_dict_dest is %i", skip_add_to_dict_src, skip_add_to_dict_dest)
       flood_packet(event, of.OFPP_ALL)  
@@ -574,6 +578,7 @@ def _handle_FlowRemoved(event):
 
 class Launcher (object):
   def __init__ (self):
+    log.debug("--- init for launcher ----")
     core.openflow.addListeners(self)
 
   #############################################################################
@@ -588,6 +593,7 @@ class Launcher (object):
 #Launch method for the controller app
 #############################################################################
 def launch ():
+  #Timer(50, prune_tainted_list, recurring = True)
   Timer(.5, taint_msg_listener, recurring = False)
   import pox.openflow.discovery
   pox.openflow.discovery.launch()
@@ -598,6 +604,8 @@ def launch ():
   #core.openflow.addListenerByName("PacketIn",_handle_PacketIn)
   #core.openflow.addListenerByName("FlowStatsReceived", _handle_flowstats_received) 
   #core.openflow.addListenerByName("FlowRemoved", _handle_flow_removed)
+  #thr = Thread(target = taint_msg_listener, name = 'listen_for_messages')
+  #thr.start()
 
 
 ##############################################################################
