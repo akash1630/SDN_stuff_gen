@@ -298,7 +298,7 @@ class Switch(object):
     self.ip_port_dict_local = {}                  #mapping for destination mac addr and egres port
 
     
-    connection.addListeners(self)
+    core.openflow.addListeners(self)
 
   #############################################################################
   #Event handler for packet_in event
@@ -574,7 +574,7 @@ def take_counter_action(action, pivot_host):
 
 
 class Launcher(object):
-  def _init_(self):
+  def __init__ (self):
     log.debug("--- init for launcher ----")
     core.openflow.addListeners(self)
 
