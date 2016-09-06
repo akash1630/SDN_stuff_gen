@@ -589,7 +589,7 @@ class Launcher (object):
   #Event handler for connectionUp event
   #############################################################################
   def _handle_ConnectionUp (self,event):
-    log.debug("ConnectionUp %s", % (event.connection,))
+    log.debug("ConnectionUp %s" % (event.connection,))
     Switch(event.connection)
 
 
